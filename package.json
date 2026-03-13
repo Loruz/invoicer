@@ -1,0 +1,22 @@
+{
+  "name": "invoicer",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev --filter=@invoicer/web",
+    "dev:all": "turbo dev",
+    "dev:extension": "turbo dev --filter=@invoicer/extension",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "db:generate": "turbo db:generate --filter=@invoicer/web",
+    "db:migrate": "turbo db:migrate --filter=@invoicer/web",
+    "db:push": "turbo db:push --filter=@invoicer/web",
+    "db:studio": "pnpm --filter @invoicer/web db:studio"
+  },
+  "packageManager": "pnpm@10.12.1",
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "turbo": "^2.8.15"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "@invoicer/extension",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build"
+  },
+  "dependencies": {
+    "@clerk/chrome-extension": "^3.1.0",
+    "@invoicer/shared": "workspace:*",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4",
+    "@types/chrome": "^0.0.300",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@wxt-dev/module-react": "^1.2.1",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "wxt": "^0.20.0"
+  }
+}
