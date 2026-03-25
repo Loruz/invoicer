@@ -1,36 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Clock } from "lucide-react";
 import { calculateElapsed, formatDuration } from "@invoicer/shared";
-import type { TimeEntryWithProject } from "@invoicer/shared";
+import { useActiveTimer } from "@/hooks/use-active-timer";
 
 export function TimerWidget() {
-  const [activeEntry, setActiveEntry] = useState<TimeEntryWithProject | null>(
-    null
-  );
+  const { data: activeEntry } = useActiveTimer();
   const [elapsed, setElapsed] = useState(0);
-
-  const fetchActiveTimer = useCallback(async () => {
-    try {
-      const res = await fetch("/api/timer/active");
-      if (res.ok) {
-        const data = await res.json();
-        setActiveEntry(data);
-        if (data) {
-          setElapsed(calculateElapsed(data.startTime));
-        }
-      }
-    } catch {}
-  }, []);
-
-  useEffect(() => {
-    fetchActiveTimer();
-    // Poll every 30s to stay in sync with the time tracking page
-    const poll = setInterval(fetchActiveTimer, 30000);
-    return () => clearInterval(poll);
-  }, [fetchActiveTimer]);
 
   useEffect(() => {
     if (!activeEntry) {

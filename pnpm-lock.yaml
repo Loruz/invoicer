@@ -69,6 +69,9 @@ importers:
       '@react-pdf/renderer':
         specifier: ^4.3.0
         version: 4.3.2(react@19.2.3)
+      '@tanstack/react-query':
+        specifier: ^5.95.2
+        version: 5.95.2(react@19.2.3)
       '@uploadthing/react':
         specifier: ^7.3.3
         version: 7.3.3(next@16.1.6(@babel/core@7.29.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)(uploadthing@7.7.4(next@16.1.6(@babel/core@7.29.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(tailwindcss@4.2.1))
@@ -1884,6 +1887,14 @@ packages:
 
   '@tanstack/query-core@5.90.16':
     resolution: {integrity: sha512-MvtWckSVufs/ja463/K4PyJeqT+HMlJWtw6PrCpywznd2NSgO3m4KwO9RqbFqGg6iDE8vVMFWMeQI4Io3eEYww==}
+
+  '@tanstack/query-core@5.95.2':
+    resolution: {integrity: sha512-o4T8vZHZET4Bib3jZ/tCW9/7080urD4c+0/AUaYVpIqOsr7y0reBc1oX3ttNaSW5mYyvZHctiQ/UOP2PfdmFEQ==}
+
+  '@tanstack/react-query@5.95.2':
+    resolution: {integrity: sha512-/wGkvLj/st5Ud1Q76KF1uFxScV7WeqN1slQx5280ycwAyYkIPGaRZAEgHxe3bjirSd5Zpwkj6zNcR4cqYni/ZA==}
+    peerDependencies:
+      react: ^18 || ^19
 
   '@tybys/wasm-util@0.10.1':
     resolution: {integrity: sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg==}
@@ -7626,6 +7637,13 @@ snapshots:
       vite: 7.3.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(yaml@2.8.2)
 
   '@tanstack/query-core@5.90.16': {}
+
+  '@tanstack/query-core@5.95.2': {}
+
+  '@tanstack/react-query@5.95.2(react@19.2.3)':
+    dependencies:
+      '@tanstack/query-core': 5.95.2
+      react: 19.2.3
 
   '@tybys/wasm-util@0.10.1':
     dependencies:

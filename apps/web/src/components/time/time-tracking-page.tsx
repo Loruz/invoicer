@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import {
   ChevronLeft,
@@ -21,7 +22,7 @@ import {
   calculateElapsed,
   formatDuration,
 } from "@invoicer/shared";
-import type { TimeEntryWithProject, ProjectWithClient } from "@invoicer/shared";
+import type { TimeEntryWithProject } from "@invoicer/shared";
 import {
   Dialog,
   DialogContent,
@@ -29,8 +30,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { TimeEntryDialog } from "./time-entry-dialog";
+import { useActiveProjects } from "@/hooks/use-projects";
+import { useActiveTimer } from "@/hooks/use-active-timer";
+import { useTimeEntries } from "@/hooks/use-time-entries";
 
 // ─── Types ──────────────────────────────────────────────
 type ViewMode = "list" | "calendar";
@@ -117,14 +121,11 @@ function formatDayLabel(dateStr: string): string {
 
 // ─── Main Component ─────────────────────────────────────
 export function TimeTrackingPage() {
+  const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [entries, setEntries] = useState<TimeEntryWithProject[]>([]);
-  const [loading, setLoading] = useState(true);
 
   // Timer state
-  const [activeEntry, setActiveEntry] = useState<TimeEntryWithProject | null>(null);
   const [elapsed, setElapsed] = useState(0);
-  const [projects, setProjects] = useState<ProjectWithClient[]>([]);
   const [timerProjectId, setTimerProjectId] = useState<string | null>(null);
   const [timerDescription, setTimerDescription] = useState("");
   const [timerBillable, setTimerBillable] = useState(true);
@@ -146,31 +147,24 @@ export function TimeTrackingPage() {
   const calendarMonth = calendarDate.getMonth();
   const weeks = getMonthGrid(calendarYear, calendarMonth);
 
-  // ─── Fetch projects ─────────────────────────────────
-  useEffect(() => {
-    fetch("/api/projects")
-      .then((r) => (r.ok ? r.json() : []))
-      .then((data) => setProjects(data.filter((p: ProjectWithClient) => p.isActive)))
-      .catch(() => {});
-  }, []);
+  // ─── Data hooks ───────────────────────────────────────
+  const { data: projects = [] } = useActiveProjects();
+  const { data: activeEntry } = useActiveTimer();
 
-  // ─── Fetch active timer ─────────────────────────────
-  const fetchActiveTimer = useCallback(async () => {
-    try {
-      const res = await fetch("/api/timer/active");
-      if (res.ok) {
-        const data = await res.json();
-        setActiveEntry(data);
-        if (data) {
-          setElapsed(calculateElapsed(data.startTime));
-        }
-      }
-    } catch {}
-  }, []);
+  // Compute date range for time entries query
+  const entriesRange = useMemo(() => {
+    if (viewMode === "calendar") {
+      const allDates = weeks.flat();
+      const calTo = new Date(allDates[allDates.length - 1]);
+      calTo.setDate(calTo.getDate() + 1);
+      return { from: allDates[0].toISOString(), to: calTo.toISOString() };
+    }
+    const from = new Date();
+    from.setDate(from.getDate() - 30);
+    return { from: from.toISOString() };
+  }, [viewMode, calendarYear, calendarMonth]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    fetchActiveTimer();
-  }, [fetchActiveTimer]);
+  const { data: entries = [], isLoading: loading } = useTimeEntries(entriesRange);
 
   // ─── Tick elapsed ───────────────────────────────────
   useEffect(() => {
@@ -185,39 +179,10 @@ export function TimeTrackingPage() {
     return () => clearInterval(interval);
   }, [activeEntry]);
 
-  // ─── Fetch entries ──────────────────────────────────
-  const fetchEntries = useCallback(async () => {
-    setLoading(true);
-    try {
-      // Fetch last 30 days for list view, or calendar range for calendar view
-      const now = new Date();
-      const from = new Date(now);
-      from.setDate(from.getDate() - 30);
-
-      if (viewMode === "calendar") {
-        const allDates = weeks.flat();
-        const calFrom = allDates[0];
-        const calTo = allDates[allDates.length - 1];
-        const calToEnd = new Date(calTo);
-        calToEnd.setDate(calToEnd.getDate() + 1);
-        const params = new URLSearchParams({
-          from: calFrom.toISOString(),
-          to: calToEnd.toISOString(),
-        });
-        const res = await fetch(`/api/time-entries?${params}`);
-        if (res.ok) setEntries(await res.json());
-      } else {
-        const params = new URLSearchParams({ from: from.toISOString() });
-        const res = await fetch(`/api/time-entries?${params}`);
-        if (res.ok) setEntries(await res.json());
-      }
-    } catch {}
-    setLoading(false);
-  }, [viewMode, calendarYear, calendarMonth]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    fetchEntries();
-  }, [fetchEntries]);
+  const invalidateTimerAndEntries = () => {
+    queryClient.invalidateQueries({ queryKey: ["timer"] });
+    queryClient.invalidateQueries({ queryKey: ["time-entries"] });
+  };
 
   // ─── Timer actions ──────────────────────────────────
   const handleStart = async () => {
@@ -234,7 +199,7 @@ export function TimeTrackingPage() {
         }),
       });
       if (res.ok) {
-        await fetchActiveTimer();
+        invalidateTimerAndEntries();
         setTimerDescription("");
         setTimerProjectId(null);
       }
@@ -252,9 +217,7 @@ export function TimeTrackingPage() {
         body: JSON.stringify({ entryId: activeEntry.id }),
       });
       if (res.ok) {
-        setActiveEntry(null);
-        setElapsed(0);
-        fetchEntries();
+        invalidateTimerAndEntries();
       }
     } catch {}
     setTimerLoading(false);
@@ -266,7 +229,7 @@ export function TimeTrackingPage() {
     try {
       const res = await fetch(`/api/time-entries/${id}`, { method: "DELETE" });
       if (res.ok) {
-        setEntries((prev) => prev.filter((e) => e.id !== id));
+        queryClient.invalidateQueries({ queryKey: ["time-entries"] });
       }
     } catch {}
   };
@@ -829,7 +792,7 @@ export function TimeTrackingPage() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         entry={editingEntry}
-        onSave={() => fetchEntries()}
+        onSave={() => queryClient.invalidateQueries({ queryKey: ["time-entries"] })}
       />
     </div>
   );

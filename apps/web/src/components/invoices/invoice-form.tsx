@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import {
 	Plus,
@@ -30,6 +31,9 @@ import {
 import { DatePicker } from '@/components/ui/date-picker';
 import { FieldHint } from '@/components/ui/field-hint';
 import { TimeEntryPicker } from './time-entry-picker';
+import { useClients } from '@/hooks/use-clients';
+import { useNextInvoiceNumber } from '@/hooks/use-next-invoice-number';
+import { useUnbilledTime } from '@/hooks/use-unbilled-time';
 
 interface LineItem {
 	description: string;
@@ -98,12 +102,11 @@ export function InvoiceForm({
 	const router = useRouter();
 	const isEditing = !!invoiceId;
 
-	const [clients, setClients] = useState<Client[]>([]);
-	const [loadingClients, setLoadingClients] = useState(true);
+	const queryClient = useQueryClient();
+	const { data: clients = [], isLoading: loadingClients } = useClients();
 	const [submitting, setSubmitting] = useState(false);
 	const [savingDraft, setSavingDraft] = useState(false);
 	const [pickerOpen, setPickerOpen] = useState(false);
-	const [unbilledSeconds, setUnbilledSeconds] = useState<number | null>(null);
 	const [invoiceNumber, setInvoiceNumber] = useState(
 		initialData?.invoiceNumber ?? ''
 	);
@@ -156,20 +159,14 @@ export function InvoiceForm({
 		return [];
 	});
 
-	// Fetch clients + invoice number for new invoices
+	// Fetch next invoice number for new invoices
+	const { data: nextNumber } = useNextInvoiceNumber(!isEditing);
 	useEffect(() => {
-		fetch('/api/clients')
-			.then((r) => (r.ok ? r.json() : []))
-			.then(setClients)
-			.finally(() => setLoadingClients(false));
-		if (!isEditing) {
-			fetch('/api/invoices/next-number')
-				.then((r) => (r.ok ? r.json() : null))
-				.then((d) => {
-					if (d?.invoiceNumber) setInvoiceNumber(d.invoiceNumber);
-				});
-		}
-	}, [isEditing]);
+		if (nextNumber && !invoiceNumber) setInvoiceNumber(nextNumber);
+	}, [nextNumber]); // eslint-disable-line react-hooks/exhaustive-deps
+
+	// Unbilled time for selected client
+	const { data: unbilledSeconds = 0 } = useUnbilledTime(clientId || null);
 
 	// Calculations
 	const subtotal = lineItems.reduce(
@@ -225,25 +222,6 @@ export function InvoiceForm({
 		);
 	};
 
-	// Fetch unbilled hours count when client changes
-	useEffect(() => {
-		if (!clientId) {
-			setUnbilledSeconds(null);
-			return;
-		}
-		fetch(`/api/time-entries?clientId=${clientId}&unbilled=true`)
-			.then((r) => (r.ok ? r.json() : []))
-			.then((entries: { duration: number | null }[]) => {
-				const total = entries.reduce(
-					(s: number, e: { duration: number | null }) =>
-						s + (e.duration ?? 0),
-					0
-				);
-				setUnbilledSeconds(total);
-			})
-			.catch(() => setUnbilledSeconds(null));
-	}, [clientId]);
-
 	const handlePickerSelect = useCallback(
 		(entries: TimeEntryWithProject[]) => {
 			const newItems: LineItem[] = entries.map((entry, idx) => {
@@ -269,14 +247,7 @@ export function InvoiceForm({
 						: prev;
 				return [...existing, ...newItems];
 			});
-			// Update unbilled count
-			const addedSeconds = entries.reduce(
-				(s, e) => s + (e.duration ?? 0),
-				0
-			);
-			setUnbilledSeconds((prev) =>
-				prev !== null ? Math.max(0, prev - addedSeconds) : null
-			);
+			queryClient.invalidateQueries({ queryKey: ["time-entries", "unbilled"] });
 			toast.success(`Added ${newItems.length} time entries.`);
 		},
 		[lineItems.length]

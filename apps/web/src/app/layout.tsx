@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Providers } from "@/components/providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -18,10 +19,12 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en">
         <body className="antialiased">
-          <TooltipProvider>
-            {children}
-          </TooltipProvider>
-          <Toaster />
+          <Providers>
+            <TooltipProvider>
+              {children}
+            </TooltipProvider>
+            <Toaster />
+          </Providers>
         </body>
       </html>
     </ClerkProvider>

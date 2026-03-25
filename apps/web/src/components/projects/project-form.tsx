@@ -1,16 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { currencies } from "@invoicer/shared";
 import { Loader2, Check, ChevronDownIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FieldHint } from "@/components/ui/field-hint";
-
-interface Client {
-  id: string;
-  companyName: string;
-}
+import { useClients } from "@/hooks/use-clients";
 
 interface ProjectFormProps {
   projectId?: string;
@@ -30,8 +26,7 @@ export function ProjectForm({ projectId, defaultClientId, initialData }: Project
   const router = useRouter();
   const isEditing = !!projectId;
 
-  const [clients, setClients] = useState<Client[]>([]);
-  const [loadingClients, setLoadingClients] = useState(true);
+  const { data: clients = [], isLoading: loadingClients } = useClients();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,10 +39,6 @@ export function ProjectForm({ projectId, defaultClientId, initialData }: Project
   const [currency, setCurrency] = useState(initialData?.currency ?? "USD");
   const [color, setColor] = useState(initialData?.color ?? "#3b82f6");
   const [isActive, setIsActive] = useState(initialData?.isActive ?? true);
-
-  useEffect(() => {
-    fetch("/api/clients").then((r) => r.ok ? r.json() : []).then(setClients).finally(() => setLoadingClients(false));
-  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

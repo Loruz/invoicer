@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { ChevronDownIcon } from "lucide-react";
 import {
   Select,
@@ -10,7 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FieldHint } from "@/components/ui/field-hint";
-import type { ProjectWithClient } from "@invoicer/shared";
+import { useActiveProjects } from "@/hooks/use-projects";
 
 interface ProjectSelectorProps {
   value: string;
@@ -23,29 +22,9 @@ export function ProjectSelector({
   onChange,
   className,
 }: ProjectSelectorProps) {
-  const [projects, setProjects] = useState<ProjectWithClient[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: activeProjects, isLoading } = useActiveProjects();
 
-  useEffect(() => {
-    async function fetchProjects() {
-      try {
-        const res = await fetch("/api/projects");
-        if (res.ok) {
-          const data = await res.json();
-          setProjects(data);
-        }
-      } catch {
-        // silently fail
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchProjects();
-  }, []);
-
-  const activeProjects = projects.filter((p) => p.isActive);
-
-  if (!loading && activeProjects.length === 0) {
+  if (!isLoading && activeProjects.length === 0) {
     return (
       <FieldHint
         message="Create a project first to track time."
@@ -62,9 +41,9 @@ export function ProjectSelector({
 
   return (
     <Select value={value || null} onValueChange={(val) => { if (val !== null) onChange(val); }}>
-      <SelectTrigger className={className} disabled={loading}>
-        <SelectValue placeholder={loading ? "Loading..." : "Select project"}>
-          {(val) => val ? activeProjects.find((p) => p.id === val)?.name ?? val : (loading ? "Loading..." : "Select project")}
+      <SelectTrigger className={className} disabled={isLoading}>
+        <SelectValue placeholder={isLoading ? "Loading..." : "Select project"}>
+          {(val) => val ? activeProjects.find((p) => p.id === val)?.name ?? val : (isLoading ? "Loading..." : "Select project")}
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
