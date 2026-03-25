@@ -128,7 +128,9 @@ export function ProjectForm({ projectId, defaultClientId, initialData }: Project
                   ) : (
                     <Select value={clientId || null} onValueChange={(val) => { if (val !== null) setClientId(val); }}>
                       <SelectTrigger className="w-full rounded-lg border border-[#E8ECF1] bg-white px-3 py-2.5 text-sm">
-                        <SelectValue placeholder="Select client" />
+                        <SelectValue placeholder="Select client">
+                          {(value) => value ? clients.find((c) => c.id === value)?.companyName ?? value : "Select client"}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {clients.map((c) => (
@@ -142,7 +144,9 @@ export function ProjectForm({ projectId, defaultClientId, initialData }: Project
                   <label className="mb-1.5 block text-sm font-medium text-slate-700">Status</label>
                   <Select value={isActive ? "active" : "inactive"} onValueChange={(val) => { if (val !== null) setIsActive(val === "active"); }}>
                     <SelectTrigger className="w-full rounded-lg border border-[#E8ECF1] bg-white px-3 py-2.5 text-sm">
-                      <SelectValue />
+                      <SelectValue>
+                        {(value) => value === "active" ? "Active" : "Inactive"}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="active">Active</SelectItem>
@@ -166,7 +170,9 @@ export function ProjectForm({ projectId, defaultClientId, initialData }: Project
                 <label className="mb-1.5 block text-sm font-medium text-slate-700">Currency</label>
                 <Select value={currency || null} onValueChange={(val) => { if (val !== null) setCurrency(val); }}>
                   <SelectTrigger className="w-full rounded-lg border border-[#E8ECF1] bg-white px-3 py-2.5 text-sm">
-                    <SelectValue />
+                    <SelectValue>
+                      {(value) => { const c = currencies.find((c) => c.code === value); return c ? `${c.symbol} ${c.name}` : value; }}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {currencies.map((c) => (

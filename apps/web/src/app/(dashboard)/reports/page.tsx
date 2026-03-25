@@ -1,68 +1,28 @@
 import { getAuthenticatedUser } from "@/lib/auth";
-import { db } from "@/db";
-import { invoices, clients } from "@/db/schema";
-import { eq, sql, desc, and } from "drizzle-orm";
+import { getInvoiceStats, getMonthlyRevenue, getRevenueByClient } from "@/lib/queries/reports";
 import { formatCurrency } from "@invoicer/shared";
 import { Download } from "lucide-react";
+import { ChartBar } from "@/components/reports/chart-bar";
 
 export default async function ReportsPage() {
   const user = await getAuthenticatedUser();
   const userCurrency = user.defaultCurrency ?? "USD";
 
-  // Stats
-  const [stats] = await db
-    .select({
-      totalRevenue: sql<number>`COALESCE(SUM(${invoices.total}), 0)`,
-      invoiceCount: sql<number>`COUNT(*)`,
-      paidCount: sql<number>`COUNT(CASE WHEN ${invoices.status} = 'paid' THEN 1 END)`,
-      paidTotal: sql<number>`COALESCE(SUM(CASE WHEN ${invoices.status} = 'paid' THEN ${invoices.total} ELSE 0 END), 0)`,
-      overdueTotal: sql<number>`COALESCE(SUM(CASE WHEN ${invoices.status} = 'overdue' THEN ${invoices.total} ELSE 0 END), 0)`,
-      overdueCount: sql<number>`COUNT(CASE WHEN ${invoices.status} = 'overdue' THEN 1 END)`,
-    })
-    .from(invoices)
-    .where(eq(invoices.userId, user.id));
+  const [stats, monthlyRevenue, revenueByClient] = await Promise.all([
+    getInvoiceStats(user.id),
+    getMonthlyRevenue(user.id),
+    getRevenueByClient(user.id),
+  ]);
 
-  const totalRevenue = stats?.totalRevenue || 0;
-  const invoiceCount = stats?.invoiceCount || 0;
+  const totalRevenue = Number(stats?.totalRevenue) || 0;
+  const invoiceCount = Number(stats?.invoiceCount) || 0;
   const avgInvoiceValue = invoiceCount > 0 ? Math.round(totalRevenue / invoiceCount) : 0;
-  const paidCount = stats?.paidCount || 0;
+  const paidCount = Number(stats?.paidCount) || 0;
   const collectionRate = invoiceCount > 0 ? Math.round((paidCount / invoiceCount) * 1000) / 10 : 0;
-  const overdueTotal = stats?.overdueTotal || 0;
-  const overdueCount = stats?.overdueCount || 0;
+  const overdueTotal = Number(stats?.overdueTotal) || 0;
+  const overdueCount = Number(stats?.overdueCount) || 0;
 
-  // Monthly revenue for chart (last 6 months)
-  const monthlyRevenue = await db
-    .select({
-      month: sql<string>`TO_CHAR(${invoices.issueDate}, 'YYYY-MM')`,
-      monthLabel: sql<string>`TO_CHAR(${invoices.issueDate}, 'Mon')`,
-      total: sql<number>`COALESCE(SUM(${invoices.total}), 0)`,
-      paid: sql<number>`COALESCE(SUM(CASE WHEN ${invoices.status} = 'paid' THEN ${invoices.total} ELSE 0 END), 0)`,
-    })
-    .from(invoices)
-    .where(
-      and(
-        eq(invoices.userId, user.id),
-        sql`${invoices.issueDate} >= NOW() - INTERVAL '6 months'`
-      )
-    )
-    .groupBy(sql`TO_CHAR(${invoices.issueDate}, 'YYYY-MM')`, sql`TO_CHAR(${invoices.issueDate}, 'Mon')`)
-    .orderBy(sql`TO_CHAR(${invoices.issueDate}, 'YYYY-MM')`);
-
-  // Compute chart bar heights
-  const maxRevenue = Math.max(...monthlyRevenue.map((m) => m.total), 1);
-
-  // Revenue by client
-  const revenueByClient = await db
-    .select({
-      clientName: clients.companyName,
-      total: sql<number>`COALESCE(SUM(${invoices.total}), 0)`,
-    })
-    .from(invoices)
-    .innerJoin(clients, eq(invoices.clientId, clients.id))
-    .where(eq(invoices.userId, user.id))
-    .groupBy(clients.id, clients.companyName)
-    .orderBy(desc(sql`SUM(${invoices.total})`))
-    .limit(5);
+  const maxRevenue = Math.max(...monthlyRevenue.map((m) => Number(m.total) || 0), 1);
 
   const clientColors = ["#1e40af", "#16a34a", "#d97706", "#7c3aed", "#ec4899"];
 
@@ -132,15 +92,15 @@ export default async function ReportsPage() {
                 return (
                   <div key={month.month} className="flex flex-1 flex-col items-center gap-2">
                     <div className="relative w-full flex justify-center gap-1" style={{ height: "240px" }}>
-                      <div
-                        className="w-8 rounded-t-md bg-blue-100"
-                        style={{ height: `${totalHeight}%`, marginTop: "auto" }}
-                        title={`Total: ${formatCurrency(month.total, userCurrency)}`}
+                      <ChartBar
+                        height={`${totalHeight}%`}
+                        className="bg-blue-100"
+                        label={`Total: ${formatCurrency(Number(month.total), userCurrency)}`}
                       />
-                      <div
-                        className="w-8 rounded-t-md bg-blue-600"
-                        style={{ height: `${paidHeight}%`, marginTop: "auto" }}
-                        title={`Paid: ${formatCurrency(month.paid, userCurrency)}`}
+                      <ChartBar
+                        height={`${paidHeight}%`}
+                        className="bg-blue-600"
+                        label={`Paid: ${formatCurrency(Number(month.paid), userCurrency)}`}
                       />
                     </div>
                     <span className="text-xs text-slate-400">{month.monthLabel}</span>

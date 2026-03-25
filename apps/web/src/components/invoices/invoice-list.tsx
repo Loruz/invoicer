@@ -92,7 +92,9 @@ export function InvoiceList({ invoices }: InvoiceListProps) {
           </div>
           <Select value={statusFilter} onValueChange={(val) => { if (val !== null) setStatusFilter(val); }}>
             <SelectTrigger className="rounded-lg border border-[#E8ECF1] bg-white px-3 py-2 text-sm">
-              <SelectValue />
+              <SelectValue>
+                {(value) => { const labels: Record<string, string> = { all: "All Status", draft: "Draft", sent: "Sent", paid: "Paid", overdue: "Overdue" }; return labels[value as string] ?? value; }}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>

@@ -1,10 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Pencil, Clock, ArrowLeft } from "lucide-react";
-import { db } from "@/db";
-import { projects, timeEntries } from "@/db/schema";
-import { eq, and, desc } from "drizzle-orm";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { getProjectDetail, getProjectTimeEntries } from "@/lib/queries/projects";
 import { formatCurrency, formatDurationShort } from "@invoicer/shared";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,25 +31,10 @@ export default async function ProjectDetailPage({
   const user = await getAuthenticatedUser();
   const { projectId } = await params;
 
-  const project = await db.query.projects.findFirst({
-    where: and(eq(projects.id, projectId), eq(projects.userId, user.id)),
-    with: {
-      client: true,
-    },
-  });
+  const project = await getProjectDetail(projectId, user.id);
+  if (!project) notFound();
 
-  if (!project) {
-    notFound();
-  }
-
-  const recentEntries = await db.query.timeEntries.findMany({
-    where: and(
-      eq(timeEntries.projectId, projectId),
-      eq(timeEntries.userId, user.id),
-    ),
-    orderBy: desc(timeEntries.startTime),
-    limit: 10,
-  });
+  const recentEntries = await getProjectTimeEntries(projectId, user.id);
 
   return (
     <div>

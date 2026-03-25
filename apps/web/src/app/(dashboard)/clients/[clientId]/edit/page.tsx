@@ -1,7 +1,5 @@
 import { getAuthenticatedUser } from "@/lib/auth";
-import { db } from "@/db";
-import { clients } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { getClientDetail } from "@/lib/queries/clients";
 import { notFound } from "next/navigation";
 import { ClientForm } from "@/components/clients/client-form";
 
@@ -13,10 +11,7 @@ export default async function EditClientPage({
   const user = await getAuthenticatedUser();
   const { clientId } = await params;
 
-  const client = await db.query.clients.findFirst({
-    where: and(eq(clients.id, clientId), eq(clients.userId, user.id)),
-  });
-
+  const client = await getClientDetail(clientId, user.id);
   if (!client) notFound();
 
   return (
@@ -26,6 +21,7 @@ export default async function EditClientPage({
         clientId={clientId}
         initialData={{
           companyName: client.companyName,
+          companyCode: client.companyCode ?? undefined,
           contactName: client.contactName ?? undefined,
           email: client.email ?? undefined,
           phone: client.phone ?? undefined,

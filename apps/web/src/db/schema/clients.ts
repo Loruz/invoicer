@@ -10,6 +10,7 @@ export const clients = pgTable("clients", {
     .references(() => users.id)
     .notNull(),
   companyName: text("company_name").notNull(),
+  companyCode: text("company_code"),
   contactName: text("contact_name"),
   email: text("email"),
   phone: text("phone"),

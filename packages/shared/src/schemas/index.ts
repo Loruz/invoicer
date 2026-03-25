@@ -6,6 +6,7 @@ const currencyCodes = currencies.map((c) => c.code) as [string, ...string[]];
 // Client schemas
 export const createClientSchema = z.object({
   companyName: z.string().min(1, "Company name is required").max(255),
+  companyCode: z.string().max(50).optional(),
   contactName: z.string().max(255).optional(),
   email: z.string().email("Invalid email").optional().or(z.literal("")),
   phone: z.string().max(50).optional(),

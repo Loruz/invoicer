@@ -122,16 +122,29 @@ export function ClientForm({ clientId, initialData }: ClientFormProps) {
                   className="w-full rounded-lg border border-[#E8ECF1] bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 />
               </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                  Contact Name
-                </label>
-                <input
-                  name="contactName"
-                  defaultValue={initialData?.contactName ?? ""}
-                  placeholder="Full name of primary contact"
-                  className="w-full rounded-lg border border-[#E8ECF1] bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                    Contact Name
+                  </label>
+                  <input
+                    name="contactName"
+                    defaultValue={initialData?.contactName ?? ""}
+                    placeholder="Full name of primary contact"
+                    className="w-full rounded-lg border border-[#E8ECF1] bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                    Company Code
+                  </label>
+                  <input
+                    name="companyCode"
+                    defaultValue={initialData?.companyCode ?? ""}
+                    placeholder="e.g. 304837546"
+                    className="w-full rounded-lg border border-[#E8ECF1] bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>

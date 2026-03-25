@@ -15,6 +15,13 @@
       "when": 1774387662650,
       "tag": "0001_slimy_sir_ram",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1774449066097,
+      "tag": "0002_hard_fantastic_four",
+      "breakpoints": true
     }
   ]
 }

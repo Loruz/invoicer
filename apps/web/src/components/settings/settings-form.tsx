@@ -295,7 +295,9 @@ export function SettingsForm({ user }: SettingsFormProps) {
                   </label>
                   <Select defaultValue="net_30">
                     <SelectTrigger className="w-full rounded-lg border border-[#E8ECF1] bg-white px-3 py-2.5 text-sm">
-                      <SelectValue />
+                      <SelectValue>
+                        {(value) => PAYMENT_TERMS.find((t) => t.value === value)?.label ?? value}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {PAYMENT_TERMS.map((t) => (
@@ -312,7 +314,9 @@ export function SettingsForm({ user }: SettingsFormProps) {
                   </label>
                   <Select value={defaultCurrency} onValueChange={(val) => { if (val !== null) setDefaultCurrency(val); }}>
                     <SelectTrigger className="w-full rounded-lg border border-[#E8ECF1] bg-white px-3 py-2.5 text-sm">
-                      <SelectValue />
+                      <SelectValue>
+                        {(value) => { const c = currencies.find((c) => c.code === value); return c ? `${c.code} (${c.symbol})` : value; }}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {currencies.map((c) => (

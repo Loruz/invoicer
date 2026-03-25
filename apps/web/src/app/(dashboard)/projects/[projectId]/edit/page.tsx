@@ -1,8 +1,6 @@
 import { notFound } from "next/navigation";
-import { db } from "@/db";
-import { projects } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { getProjectForEdit } from "@/lib/queries/projects";
 import { ProjectForm } from "@/components/projects/project-form";
 
 export default async function EditProjectPage({
@@ -13,13 +11,8 @@ export default async function EditProjectPage({
   const user = await getAuthenticatedUser();
   const { projectId } = await params;
 
-  const project = await db.query.projects.findFirst({
-    where: and(eq(projects.id, projectId), eq(projects.userId, user.id)),
-  });
-
-  if (!project) {
-    notFound();
-  }
+  const project = await getProjectForEdit(projectId, user.id);
+  if (!project) notFound();
 
   return (
     <div>

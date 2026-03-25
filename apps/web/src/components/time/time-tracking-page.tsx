@@ -29,6 +29,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { TimeEntryDialog } from "./time-entry-dialog";
 
 // ─── Types ──────────────────────────────────────────────
@@ -424,39 +425,65 @@ export function TimeTrackingPage() {
             />
             <div className="flex items-center gap-2 shrink-0">
               {/* Project selector */}
-              <Select value={timerProjectId} onValueChange={(val) => setTimerProjectId(val)}>
-                <SelectTrigger className="rounded-lg border border-[#E8ECF1] bg-white px-3 py-2 text-sm max-w-[180px]">
-                  <SelectValue placeholder="Project" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {projects.length === 0 ? (
+                <Link
+                  href="/projects/new"
+                  className="rounded-lg border border-dashed border-[#E8ECF1] px-3 py-2 text-sm text-slate-400 hover:border-blue-300 hover:text-blue-500 transition-colors"
+                >
+                  + Add project
+                </Link>
+              ) : (
+                <Select value={timerProjectId} onValueChange={(val) => setTimerProjectId(val)}>
+                  <SelectTrigger className="rounded-lg border border-[#E8ECF1] bg-white text-sm max-w-[180px]">
+                    <SelectValue placeholder="Project">
+                      {(value) => value ? projects.find((p) => p.id === value)?.name ?? value : "Project"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               {/* Billable toggle */}
-              <button
-                type="button"
-                onClick={() => setTimerBillable(!timerBillable)}
-                className={`flex h-9 w-9 items-center justify-center rounded-lg border transition-colors ${
-                  timerBillable
-                    ? "border-blue-200 bg-blue-50 text-blue-600"
-                    : "border-[#E8ECF1] text-slate-300 hover:text-slate-500"
-                }`}
-                title={timerBillable ? "Billable" : "Non-billable"}
-              >
-                <DollarSign className="h-4 w-4" />
-              </button>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <button
+                      type="button"
+                      onClick={() => setTimerBillable(!timerBillable)}
+                      className={`flex h-9 w-9 items-center justify-center rounded-lg border transition-colors ${
+                        timerBillable
+                          ? "border-blue-200 bg-blue-50 text-blue-600"
+                          : "border-[#E8ECF1] text-slate-300 hover:text-slate-500"
+                      }`}
+                    >
+                      <DollarSign className="h-4 w-4" />
+                    </button>
+                  }
+                />
+                <TooltipContent>{timerBillable ? "Billable" : "Non-billable"}</TooltipContent>
+              </Tooltip>
               {/* Start button */}
-              <button
-                onClick={handleStart}
-                disabled={!timerProjectId || timerLoading}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0F766E] text-white hover:bg-[#0d6960] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <Play className="h-4 w-4 fill-current ml-0.5" />
-              </button>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <button
+                      onClick={handleStart}
+                      disabled={!timerProjectId || timerLoading}
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0F766E] text-white hover:bg-[#0d6960] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Play className="h-4 w-4 fill-current ml-0.5" />
+                    </button>
+                  }
+                />
+                {!timerProjectId && (
+                  <TooltipContent>Select a project first</TooltipContent>
+                )}
+              </Tooltip>
             </div>
           </div>
         )}

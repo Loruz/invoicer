@@ -1,7 +1,5 @@
 import { getAuthenticatedUser } from "@/lib/auth";
-import { db } from "@/db";
-import { clients, projects } from "@/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { getClientDetail, getClientProjects } from "@/lib/queries/clients";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -18,16 +16,10 @@ export default async function ClientDetailPage({
   const user = await getAuthenticatedUser();
   const { clientId } = await params;
 
-  const client = await db.query.clients.findFirst({
-    where: and(eq(clients.id, clientId), eq(clients.userId, user.id)),
-  });
-
+  const client = await getClientDetail(clientId, user.id);
   if (!client) notFound();
 
-  const projectList = await db.query.projects.findMany({
-    where: and(eq(projects.clientId, clientId), eq(projects.userId, user.id)),
-    orderBy: desc(projects.createdAt),
-  });
+  const projectList = await getClientProjects(clientId, user.id);
 
   return (
     <div>

@@ -63,7 +63,9 @@ export function ProjectSelector({
   return (
     <Select value={value || null} onValueChange={(val) => { if (val !== null) onChange(val); }}>
       <SelectTrigger className={className} disabled={loading}>
-        <SelectValue placeholder={loading ? "Loading..." : "Select project"} />
+        <SelectValue placeholder={loading ? "Loading..." : "Select project"}>
+          {(val) => val ? activeProjects.find((p) => p.id === val)?.name ?? val : (loading ? "Loading..." : "Select project")}
+        </SelectValue>
       </SelectTrigger>
       <SelectContent>
         {activeProjects.map((project) => (

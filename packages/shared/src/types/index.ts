@@ -47,6 +47,7 @@ export type Client = {
   id: string;
   userId: string;
   companyName: string;
+  companyCode: string | null;
   contactName: string | null;
   email: string | null;
   phone: string | null;
