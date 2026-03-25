@@ -8,10 +8,5 @@ export default async function NewProjectPage({
   const params = await searchParams;
   const clientId = typeof params.clientId === "string" ? params.clientId : undefined;
 
-  return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">New Project</h1>
-      <ProjectForm defaultClientId={clientId} />
-    </div>
-  );
+  return <ProjectForm defaultClientId={clientId} />;
 }

@@ -1,5 +1,7 @@
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 import { formatCurrency } from "@invoicer/shared";
+import type { InvoiceTemplate } from "@invoicer/shared";
+import { DEFAULT_INVOICE_TEMPLATE } from "@invoicer/shared";
 
 type InvoicePdfProps = {
   invoice: {
@@ -46,191 +48,209 @@ type InvoicePdfProps = {
     businessAddress: string | null;
     businessEmail: string | null;
     businessPhone: string | null;
+    businessEntity: string | null;
     taxId: string | null;
   };
+  template?: InvoiceTemplate | null;
 };
 
-const BLUE = "#2563eb";
-const LIGHT_BLUE = "#eff6ff";
 const GRAY = "#6b7280";
 const DARK = "#111827";
 const BORDER = "#e5e7eb";
 
-const styles = StyleSheet.create({
-  page: {
-    fontFamily: "Helvetica",
-    fontSize: 10,
-    paddingTop: 40,
-    paddingBottom: 60,
-    paddingHorizontal: 40,
-    color: DARK,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 30,
-  },
-  headerLeft: {
-    flexDirection: "column",
-    maxWidth: "60%",
-  },
-  businessName: {
-    fontSize: 20,
-    fontFamily: "Helvetica-Bold",
-    color: BLUE,
-    marginBottom: 4,
-  },
-  businessDetail: {
-    fontSize: 9,
-    color: GRAY,
-    marginBottom: 2,
-  },
-  headerRight: {
-    flexDirection: "column",
-    alignItems: "flex-end",
-  },
-  invoiceTitle: {
-    fontSize: 24,
-    fontFamily: "Helvetica-Bold",
-    color: BLUE,
-    marginBottom: 6,
-  },
-  invoiceDetail: {
-    fontSize: 9,
-    color: GRAY,
-    marginBottom: 2,
-    textAlign: "right",
-  },
-  invoiceDetailValue: {
-    fontFamily: "Helvetica-Bold",
-    color: DARK,
-  },
-  divider: {
-    height: 2,
-    backgroundColor: BLUE,
-    marginBottom: 20,
-  },
-  billToSection: {
-    marginBottom: 24,
-  },
-  sectionLabel: {
-    fontSize: 8,
-    fontFamily: "Helvetica-Bold",
-    color: BLUE,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-    marginBottom: 6,
-  },
-  clientName: {
-    fontSize: 12,
-    fontFamily: "Helvetica-Bold",
-    marginBottom: 3,
-  },
-  clientDetail: {
-    fontSize: 9,
-    color: GRAY,
-    marginBottom: 2,
-  },
-  table: {
-    marginBottom: 20,
-  },
-  tableHeader: {
-    flexDirection: "row",
-    backgroundColor: BLUE,
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    borderRadius: 2,
-  },
-  tableHeaderText: {
-    fontSize: 8,
-    fontFamily: "Helvetica-Bold",
-    color: "#ffffff",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  tableRow: {
-    flexDirection: "row",
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
-  },
-  tableRowAlt: {
-    backgroundColor: LIGHT_BLUE,
-  },
-  colNum: { width: "6%" },
-  colDesc: { width: "34%" },
-  colQty: { width: "12%", textAlign: "right" },
-  colPrice: { width: "16%", textAlign: "right" },
-  colTax: { width: "14%", textAlign: "right" },
-  colAmount: { width: "18%", textAlign: "right" },
-  totalsContainer: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    marginBottom: 24,
-  },
-  totalsBox: {
-    width: 220,
-  },
-  totalsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-  },
-  totalsLabel: {
-    fontSize: 9,
-    color: GRAY,
-  },
-  totalsValue: {
-    fontSize: 9,
-    fontFamily: "Helvetica-Bold",
-  },
-  totalsDivider: {
-    height: 1,
-    backgroundColor: BORDER,
-    marginVertical: 2,
-  },
-  grandTotalRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    backgroundColor: BLUE,
-    borderRadius: 2,
-    marginTop: 4,
-  },
-  grandTotalLabel: {
-    fontSize: 11,
-    fontFamily: "Helvetica-Bold",
-    color: "#ffffff",
-  },
-  grandTotalValue: {
-    fontSize: 11,
-    fontFamily: "Helvetica-Bold",
-    color: "#ffffff",
-  },
-  notesSection: {
-    marginBottom: 16,
-  },
-  notesText: {
-    fontSize: 9,
-    color: GRAY,
-    lineHeight: 1.5,
-  },
-  footer: {
-    position: "absolute",
-    bottom: 30,
-    left: 40,
-    right: 40,
-    textAlign: "center",
-    fontSize: 8,
-    color: GRAY,
-    borderTopWidth: 1,
-    borderTopColor: BORDER,
-    paddingTop: 8,
-  },
-});
+const FONT_MAP: Record<string, string> = {
+  default: "Helvetica",
+  serif: "Times-Roman",
+  mono: "Courier",
+};
+
+const FONT_BOLD_MAP: Record<string, string> = {
+  default: "Helvetica-Bold",
+  serif: "Times-Bold",
+  mono: "Courier-Bold",
+};
+
+function makeStyles(t: InvoiceTemplate) {
+  const font = FONT_MAP[t.fontFamily] ?? "Helvetica";
+  const fontBold = FONT_BOLD_MAP[t.fontFamily] ?? "Helvetica-Bold";
+  const lightBg = t.primaryColor + "10";
+
+  return StyleSheet.create({
+    page: {
+      fontFamily: font,
+      fontSize: 10,
+      paddingTop: 40,
+      paddingBottom: 60,
+      paddingHorizontal: 40,
+      color: DARK,
+    },
+    header: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: 30,
+    },
+    headerLeft: {
+      flexDirection: "column",
+      maxWidth: "60%",
+    },
+    businessName: {
+      fontSize: 20,
+      fontFamily: fontBold,
+      color: t.primaryColor,
+      marginBottom: 4,
+    },
+    businessDetail: {
+      fontSize: 9,
+      color: GRAY,
+      marginBottom: 2,
+    },
+    headerRight: {
+      flexDirection: "column",
+      alignItems: "flex-end",
+    },
+    invoiceTitle: {
+      fontSize: 24,
+      fontFamily: fontBold,
+      color: t.primaryColor,
+      marginBottom: 6,
+    },
+    invoiceDetail: {
+      fontSize: 9,
+      color: GRAY,
+      marginBottom: 2,
+      textAlign: "right",
+    },
+    invoiceDetailValue: {
+      fontFamily: fontBold,
+      color: DARK,
+    },
+    divider: {
+      height: 2,
+      backgroundColor: t.primaryColor,
+      marginBottom: 20,
+    },
+    billToSection: {
+      marginBottom: 24,
+    },
+    sectionLabel: {
+      fontSize: 8,
+      fontFamily: fontBold,
+      color: t.primaryColor,
+      textTransform: "uppercase",
+      letterSpacing: 1,
+      marginBottom: 6,
+    },
+    clientName: {
+      fontSize: 12,
+      fontFamily: fontBold,
+      marginBottom: 3,
+    },
+    clientDetail: {
+      fontSize: 9,
+      color: GRAY,
+      marginBottom: 2,
+    },
+    table: {
+      marginBottom: 20,
+    },
+    tableHeader: {
+      flexDirection: "row",
+      backgroundColor: t.primaryColor,
+      paddingVertical: 6,
+      paddingHorizontal: 8,
+      borderRadius: 2,
+    },
+    tableHeaderText: {
+      fontSize: 8,
+      fontFamily: fontBold,
+      color: "#ffffff",
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    tableRow: {
+      flexDirection: "row",
+      paddingVertical: 8,
+      paddingHorizontal: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: BORDER,
+    },
+    tableRowAlt: {
+      backgroundColor: lightBg,
+    },
+    colNum: { width: "6%" },
+    colDesc: { width: "34%" },
+    colQty: { width: "12%", textAlign: "right" },
+    colPrice: { width: "16%", textAlign: "right" },
+    colTax: { width: "14%", textAlign: "right" },
+    colAmount: { width: "18%", textAlign: "right" },
+    totalsContainer: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      marginBottom: 24,
+    },
+    totalsBox: {
+      width: 220,
+    },
+    totalsRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingVertical: 4,
+      paddingHorizontal: 8,
+    },
+    totalsLabel: {
+      fontSize: 9,
+      color: GRAY,
+    },
+    totalsValue: {
+      fontSize: 9,
+      fontFamily: fontBold,
+    },
+    totalsDivider: {
+      height: 1,
+      backgroundColor: BORDER,
+      marginVertical: 2,
+    },
+    grandTotalRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingVertical: 6,
+      paddingHorizontal: 8,
+      backgroundColor: t.accentColor,
+      borderRadius: 2,
+      marginTop: 4,
+    },
+    grandTotalLabel: {
+      fontSize: 11,
+      fontFamily: fontBold,
+      color: "#ffffff",
+    },
+    grandTotalValue: {
+      fontSize: 11,
+      fontFamily: fontBold,
+      color: "#ffffff",
+    },
+    notesSection: {
+      marginBottom: 16,
+    },
+    notesText: {
+      fontSize: 9,
+      color: GRAY,
+      lineHeight: 1.5,
+    },
+    footer: {
+      position: "absolute",
+      bottom: 30,
+      left: 40,
+      right: 40,
+      textAlign: "center",
+      fontSize: 8,
+      color: GRAY,
+      borderTopWidth: 1,
+      borderTopColor: BORDER,
+      paddingTop: 8,
+    },
+  });
+}
 
 function formatDate(date: Date | string | null): string {
   if (!date) return "-";
@@ -251,7 +271,10 @@ function buildClientAddress(client: InvoicePdfProps["invoice"]["client"]): strin
   return parts.join(", ");
 }
 
-export function InvoicePdfDocument({ invoice, user }: InvoicePdfProps) {
+export function InvoicePdfDocument({ invoice, user, template: templateProp }: InvoicePdfProps) {
+  const t = { ...DEFAULT_INVOICE_TEMPLATE, ...templateProp };
+  const styles = makeStyles(t);
+
   const sortedItems = [...invoice.lineItems].sort(
     (a, b) => a.sortOrder - b.sortOrder
   );
@@ -265,6 +288,9 @@ export function InvoicePdfDocument({ invoice, user }: InvoicePdfProps) {
             <Text style={styles.businessName}>
               {user.businessName || user.name || "Your Business"}
             </Text>
+            {user.businessEntity && (
+              <Text style={styles.businessDetail}>{user.businessEntity}</Text>
+            )}
             {user.businessAddress && (
               <Text style={styles.businessDetail}>{user.businessAddress}</Text>
             )}
@@ -274,7 +300,7 @@ export function InvoicePdfDocument({ invoice, user }: InvoicePdfProps) {
             {user.businessPhone && (
               <Text style={styles.businessDetail}>{user.businessPhone}</Text>
             )}
-            {user.taxId && (
+            {t.showTaxId && user.taxId && (
               <Text style={styles.businessDetail}>Tax ID: {user.taxId}</Text>
             )}
           </View>
@@ -335,7 +361,6 @@ export function InvoicePdfDocument({ invoice, user }: InvoicePdfProps) {
 
         {/* Line Items Table */}
         <View style={styles.table}>
-          {/* Table Header */}
           <View style={styles.tableHeader}>
             <Text style={[styles.tableHeaderText, styles.colNum]}>#</Text>
             <Text style={[styles.tableHeaderText, styles.colDesc]}>
@@ -353,7 +378,6 @@ export function InvoicePdfDocument({ invoice, user }: InvoicePdfProps) {
             </Text>
           </View>
 
-          {/* Table Rows */}
           {sortedItems.map((item, index) => (
             <View
               key={index}
@@ -422,7 +446,7 @@ export function InvoicePdfDocument({ invoice, user }: InvoicePdfProps) {
         </View>
 
         {/* Notes */}
-        {invoice.notes && (
+        {t.showNotes && invoice.notes && (
           <View style={styles.notesSection}>
             <Text style={styles.sectionLabel}>Notes</Text>
             <Text style={styles.notesText}>{invoice.notes}</Text>
@@ -430,7 +454,7 @@ export function InvoicePdfDocument({ invoice, user }: InvoicePdfProps) {
         )}
 
         {/* Payment Terms */}
-        {invoice.paymentTerms && (
+        {t.showPaymentTerms && invoice.paymentTerms && (
           <View style={styles.notesSection}>
             <Text style={styles.sectionLabel}>Payment Terms</Text>
             <Text style={styles.notesText}>{invoice.paymentTerms}</Text>
@@ -439,8 +463,8 @@ export function InvoicePdfDocument({ invoice, user }: InvoicePdfProps) {
 
         {/* Footer */}
         <Text style={styles.footer}>
-          {user.businessName || user.name || "Invoice"} - {invoice.invoiceNumber}{" "}
-          - Generated on {formatDate(new Date())}
+          {t.footerText ||
+            `${user.businessName || user.name || "Invoice"} - ${invoice.invoiceNumber} - Generated on ${formatDate(new Date())}`}
         </Text>
       </Page>
     </Document>

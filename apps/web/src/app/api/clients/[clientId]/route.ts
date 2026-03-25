@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { db } from "@/db";
-import { clients, projects } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import {
+  clients,
+  projects,
+  timeEntries,
+  invoices,
+  invoiceLineItems,
+  invoiceDiscounts,
+} from "@/db/schema";
+import { eq, and, inArray } from "drizzle-orm";
 import { updateClientSchema } from "@invoicer/shared";
 
 type RouteParams = { params: Promise<{ clientId: string }> };
@@ -70,13 +77,59 @@ export async function DELETE(_req: Request, { params }: RouteParams) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
-    // Delete associated projects first
+    // Get all projects for this client
+    const clientProjects = await db.query.projects.findMany({
+      where: and(eq(projects.clientId, clientId), eq(projects.userId, user.id)),
+      columns: { id: true },
+    });
+    const projectIds = clientProjects.map((p) => p.id);
+
+    // Get all invoices for this client
+    const clientInvoices = await db.query.invoices.findMany({
+      where: and(eq(invoices.clientId, clientId), eq(invoices.userId, user.id)),
+      columns: { id: true },
+    });
+    const invoiceIds = clientInvoices.map((i) => i.id);
+
+    // Delete invoice line items and discounts
+    if (invoiceIds.length > 0) {
+      await db
+        .delete(invoiceLineItems)
+        .where(inArray(invoiceLineItems.invoiceId, invoiceIds));
+      await db
+        .delete(invoiceDiscounts)
+        .where(inArray(invoiceDiscounts.invoiceId, invoiceIds));
+    }
+
+    // Unlink time entries from invoices, then delete time entries for client projects
+    if (projectIds.length > 0) {
+      await db
+        .delete(timeEntries)
+        .where(
+          and(
+            inArray(timeEntries.projectId, projectIds),
+            eq(timeEntries.userId, user.id)
+          )
+        );
+    }
+
+    // Delete invoices
+    if (invoiceIds.length > 0) {
+      await db
+        .delete(invoices)
+        .where(
+          and(eq(invoices.clientId, clientId), eq(invoices.userId, user.id))
+        );
+    }
+
+    // Delete projects
     await db
       .delete(projects)
       .where(
         and(eq(projects.clientId, clientId), eq(projects.userId, user.id))
       );
 
+    // Delete client
     const [deleted] = await db
       .delete(clients)
       .where(and(eq(clients.id, clientId), eq(clients.userId, user.id)))

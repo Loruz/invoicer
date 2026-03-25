@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { ChevronDownIcon } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -8,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { FieldHint } from "@/components/ui/field-hint";
 import type { ProjectWithClient } from "@invoicer/shared";
 
 interface ProjectSelectorProps {
@@ -43,8 +45,23 @@ export function ProjectSelector({
 
   const activeProjects = projects.filter((p) => p.isActive);
 
+  if (!loading && activeProjects.length === 0) {
+    return (
+      <FieldHint
+        message="Create a project first to track time."
+        ctaLabel="New Project"
+        ctaHref="/projects/new"
+      >
+        <div className="flex w-full items-center justify-between rounded-lg border border-[#E8ECF1] bg-slate-50 px-3 py-2.5 text-sm text-muted-foreground cursor-not-allowed opacity-60">
+          <span>No projects found</span>
+          <ChevronDownIcon className="size-4 text-muted-foreground" />
+        </div>
+      </FieldHint>
+    );
+  }
+
   return (
-    <Select value={value} onValueChange={(val) => val !== null && onChange(val)}>
+    <Select value={value || null} onValueChange={(val) => { if (val !== null) onChange(val); }}>
       <SelectTrigger className={className} disabled={loading}>
         <SelectValue placeholder={loading ? "Loading..." : "Select project"} />
       </SelectTrigger>
@@ -54,11 +71,6 @@ export function ProjectSelector({
             {project.name}
           </SelectItem>
         ))}
-        {activeProjects.length === 0 && !loading && (
-          <div className="px-2 py-1.5 text-sm text-muted-foreground">
-            No projects found
-          </div>
-        )}
       </SelectContent>
     </Select>
   );

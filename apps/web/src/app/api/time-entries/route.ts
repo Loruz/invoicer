@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { db } from "@/db";
-import { timeEntries } from "@/db/schema";
-import { eq, and, desc, gte, lte, sql } from "drizzle-orm";
+import { timeEntries, projects } from "@/db/schema";
+import { eq, and, desc, gte, lte, isNull, inArray } from "drizzle-orm";
 import { createTimeEntrySchema } from "@invoicer/shared";
 
 export async function GET(req: Request) {
@@ -11,19 +11,40 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
 
     const projectId = searchParams.get("projectId");
+    const clientId = searchParams.get("clientId");
     const from = searchParams.get("from");
     const to = searchParams.get("to");
+    const unbilled = searchParams.get("unbilled");
 
     const conditions = [eq(timeEntries.userId, user.id)];
 
     if (projectId) {
       conditions.push(eq(timeEntries.projectId, projectId));
     }
+
+    // Filter by clientId: find all projects for that client, then filter entries
+    if (clientId) {
+      const clientProjects = await db.query.projects.findMany({
+        where: and(eq(projects.clientId, clientId), eq(projects.userId, user.id)),
+        columns: { id: true },
+      });
+      const projectIds = clientProjects.map((p) => p.id);
+      if (projectIds.length === 0) {
+        return NextResponse.json([]);
+      }
+      conditions.push(inArray(timeEntries.projectId, projectIds));
+    }
+
     if (from) {
       conditions.push(gte(timeEntries.startTime, new Date(from)));
     }
     if (to) {
       conditions.push(lte(timeEntries.startTime, new Date(to)));
+    }
+
+    // Filter unbilled entries (not linked to any invoice)
+    if (unbilled === "true") {
+      conditions.push(isNull(timeEntries.invoiceId));
     }
 
     const entries = await db.query.timeEntries.findMany({
@@ -33,6 +54,12 @@ export async function GET(req: Request) {
         project: {
           with: {
             client: true,
+          },
+        },
+        invoice: {
+          columns: {
+            id: true,
+            invoiceNumber: true,
           },
         },
       },

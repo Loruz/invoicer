@@ -1,5 +1,31 @@
 import type { CurrencyCode, InvoiceStatus, DiscountType } from "../constants";
 
+export type InvoiceTemplate = {
+  logoUrl: string | null;
+  primaryColor: string;
+  accentColor: string;
+  fontFamily: "default" | "serif" | "mono";
+  layout: "classic" | "modern" | "minimal" | "formal";
+  showLogo: boolean;
+  showTaxId: boolean;
+  showPaymentTerms: boolean;
+  showNotes: boolean;
+  footerText: string | null;
+};
+
+export const DEFAULT_INVOICE_TEMPLATE: InvoiceTemplate = {
+  logoUrl: null,
+  primaryColor: "#2563eb",
+  accentColor: "#0F766E",
+  fontFamily: "default",
+  layout: "classic",
+  showLogo: true,
+  showTaxId: true,
+  showPaymentTerms: true,
+  showNotes: true,
+  footerText: null,
+};
+
 export type User = {
   id: string;
   clerkId: string;
@@ -9,8 +35,10 @@ export type User = {
   businessAddress: string | null;
   businessEmail: string | null;
   businessPhone: string | null;
+  businessEntity: string | null;
   taxId: string | null;
   defaultCurrency: string;
+  invoiceTemplate: InvoiceTemplate | null;
   createdAt: Date;
   updatedAt: Date;
 };

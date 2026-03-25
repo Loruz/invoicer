@@ -5,41 +5,33 @@ import { eq, and } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { InvoicePreview } from "@/components/invoices/invoice-preview";
 import { InvoiceStatusActions } from "@/components/invoices/invoice-status-actions";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
-import { Pencil, Download, ArrowLeft } from "lucide-react";
-import { formatCurrency } from "@invoicer/shared";
+import { Pencil, Download, Send, ChevronLeft } from "lucide-react";
 import type { InvoiceStatus } from "@invoicer/shared";
 
 interface InvoiceDetailPageProps {
   params: Promise<{ invoiceId: string }>;
 }
 
-function getStatusBadge(status: string) {
-  switch (status) {
-    case "draft":
-      return <Badge variant="secondary">Draft</Badge>;
-    case "sent":
-      return (
-        <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
-          Sent
-        </Badge>
-      );
-    case "paid":
-      return (
-        <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
-          Paid
-        </Badge>
-      );
-    case "overdue":
-      return <Badge variant="destructive">Overdue</Badge>;
-    case "cancelled":
-      return <Badge variant="outline">Cancelled</Badge>;
-    default:
-      return <Badge variant="secondary">{status}</Badge>;
-  }
+function StatusBadge({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    draft: "bg-slate-100 text-slate-600",
+    sent: "bg-blue-50 text-blue-600",
+    pending: "bg-amber-50 text-amber-600",
+    paid: "bg-emerald-50 text-emerald-600",
+    overdue: "bg-red-50 text-red-600",
+    cancelled: "bg-slate-100 text-slate-500",
+  };
+
+  return (
+    <span
+      className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
+        styles[status] || styles.draft
+      }`}
+    >
+      {status.charAt(0).toUpperCase() + status.slice(1)}
+    </span>
+  );
 }
 
 export default async function InvoiceDetailPage({
@@ -63,49 +55,57 @@ export default async function InvoiceDetailPage({
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/invoices">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="mr-1 h-4 w-4" />
-            Back
-          </Button>
-        </Link>
-      </div>
-
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold">{invoice.invoiceNumber}</h1>
-          {getStatusBadge(invoice.status)}
+      {/* Header */}
+      <div className="mb-8 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link
+            href="/invoices"
+            className="flex items-center gap-1.5 rounded-lg border border-[#E8ECF1] bg-white px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back to Invoices
+          </Link>
+          <h1 className="text-2xl font-bold text-slate-900">
+            Invoice {invoice.invoiceNumber}
+          </h1>
+          <StatusBadge status={invoice.status} />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {invoice.status === "draft" && (
-            <Link href={`/invoices/${invoice.id}/edit`}>
-              <Button variant="outline" size="sm">
-                <Pencil className="mr-1 h-4 w-4" />
-                Edit
-              </Button>
+            <Link
+              href={`/invoices/${invoice.id}/edit`}
+              className="flex items-center gap-2 rounded-lg border border-[#E8ECF1] bg-white px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+            >
+              <Pencil className="h-4 w-4" />
+              Edit
             </Link>
           )}
           <a
             href={`/api/invoices/${invoice.id}/pdf`}
             target="_blank"
             rel="noopener noreferrer"
+            className="flex items-center gap-2 rounded-lg bg-[#0F3D5F] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#0C3350]"
           >
-            <Button variant="outline" size="sm">
-              <Download className="mr-1 h-4 w-4" />
-              Download PDF
-            </Button>
+            <Download className="h-4 w-4" />
+            Download PDF
           </a>
-          <InvoiceStatusActions
-            invoiceId={invoice.id}
-            currentStatus={invoice.status as InvoiceStatus}
-          />
+          <button className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
+            <Send className="h-4 w-4" />
+            Send to Client
+          </button>
         </div>
       </div>
 
-      <Separator className="mb-6" />
+      {/* Invoice Document */}
+      <InvoicePreview invoice={invoice} user={user} template={(user as any).invoiceTemplate} />
 
-      <InvoicePreview invoice={invoice} user={user} />
+      {/* Status Actions */}
+      <div className="mt-6">
+        <InvoiceStatusActions
+          invoiceId={invoice.id}
+          currentStatus={invoice.status as InvoiceStatus}
+        />
+      </div>
     </div>
   );
 }

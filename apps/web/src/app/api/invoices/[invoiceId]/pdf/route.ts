@@ -23,8 +23,10 @@ export async function GET(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
+    const template = (user as any).invoiceTemplate ?? null;
+
     const stream = await ReactPDF.renderToStream(
-      InvoicePdfDocument({ invoice: invoice as any, user })
+      InvoicePdfDocument({ invoice: invoice as any, user, template })
     );
 
     return new Response(stream as unknown as ReadableStream, {

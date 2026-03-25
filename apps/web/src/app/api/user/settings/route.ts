@@ -17,8 +17,10 @@ export async function GET() {
       businessAddress: user.businessAddress,
       businessEmail: user.businessEmail,
       businessPhone: user.businessPhone,
+      businessEntity: user.businessEntity,
       taxId: user.taxId,
       defaultCurrency: user.defaultCurrency,
+      invoiceTemplate: user.invoiceTemplate,
     });
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
@@ -56,6 +58,7 @@ export async function PATCH(req: Request) {
       businessPhone: updated.businessPhone,
       taxId: updated.taxId,
       defaultCurrency: updated.defaultCurrency,
+      invoiceTemplate: updated.invoiceTemplate,
     });
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {

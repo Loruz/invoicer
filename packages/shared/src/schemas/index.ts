@@ -102,6 +102,20 @@ export const updateInvoiceSchema = z.object({
   discounts: z.array(invoiceDiscountSchema).optional(),
 });
 
+// Invoice template schema
+export const invoiceTemplateSchema = z.object({
+  logoUrl: z.string().max(500).nullable().default(null),
+  primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#2563eb"),
+  accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#0F766E"),
+  fontFamily: z.enum(["default", "serif", "mono"]).default("default"),
+  layout: z.enum(["classic", "modern", "minimal", "formal"]).default("classic"),
+  showLogo: z.boolean().default(true),
+  showTaxId: z.boolean().default(true),
+  showPaymentTerms: z.boolean().default(true),
+  showNotes: z.boolean().default(true),
+  footerText: z.string().max(500).nullable().default(null),
+});
+
 // User settings schema
 export const updateUserSettingsSchema = z.object({
   name: z.string().max(255).optional(),
@@ -109,8 +123,10 @@ export const updateUserSettingsSchema = z.object({
   businessAddress: z.string().max(500).optional(),
   businessEmail: z.string().email().optional().or(z.literal("")),
   businessPhone: z.string().max(50).optional(),
+  businessEntity: z.string().max(100).optional(),
   taxId: z.string().max(100).optional(),
   defaultCurrency: z.enum(currencyCodes).optional(),
+  invoiceTemplate: invoiceTemplateSchema.optional(),
 });
 
 // Infer types from schemas
@@ -127,3 +143,4 @@ export type InvoiceDiscountInput = z.infer<typeof invoiceDiscountSchema>;
 export type CreateInvoiceInput = z.infer<typeof createInvoiceSchema>;
 export type UpdateInvoiceInput = z.infer<typeof updateInvoiceSchema>;
 export type UpdateUserSettingsInput = z.infer<typeof updateUserSettingsSchema>;
+export type InvoiceTemplateInput = z.infer<typeof invoiceTemplateSchema>;

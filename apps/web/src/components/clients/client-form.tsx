@@ -2,14 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Check } from "lucide-react";
 import {
   createClientSchema,
   type CreateClientInput,
@@ -23,7 +17,6 @@ interface ClientFormProps {
 export function ClientForm({ clientId, initialData }: ClientFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-
   const isEditing = !!clientId;
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -46,11 +39,8 @@ export function ClientForm({ clientId, initialData }: ClientFormProps) {
     }
 
     try {
-      const url = isEditing
-        ? `/api/clients/${clientId}`
-        : "/api/clients";
+      const url = isEditing ? `/api/clients/${clientId}` : "/api/clients";
       const method = isEditing ? "PATCH" : "POST";
-
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
@@ -63,15 +53,11 @@ export function ClientForm({ clientId, initialData }: ClientFormProps) {
       }
 
       const client = await res.json();
-      toast.success(
-        isEditing ? "Client updated successfully" : "Client created successfully"
-      );
+      toast.success(isEditing ? "Client updated" : "Client created");
       router.push(`/clients/${client.id}`);
       router.refresh();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Something went wrong"
-      );
+      toast.error(error instanceof Error ? error.message : "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -79,133 +65,192 @@ export function ClientForm({ clientId, initialData }: ClientFormProps) {
 
   return (
     <form onSubmit={onSubmit}>
-      <Card>
-        <CardHeader>
-          <CardTitle>Client Details</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="companyName">Company Name *</Label>
-            <Input
-              id="companyName"
-              name="companyName"
-              required
-              defaultValue={initialData?.companyName ?? ""}
-              placeholder="Acme Inc."
-            />
+      {/* Header */}
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">
+            {isEditing ? "Edit Client" : "Add New Client"}
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            {isEditing
+              ? "Update the client details."
+              : "Fill in the details to add a new client to your account."}
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            disabled={loading}
+            className="rounded-lg border border-[#E8ECF1] bg-white px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="flex items-center gap-2 rounded-lg bg-[#0F3D5F] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#0C3350] transition-colors disabled:opacity-50"
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Check className="h-4 w-4" />
+            )}
+            {isEditing ? "Save Changes" : "Save Client"}
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-6">
+        {/* Left column - Contact Information & Billing Address */}
+        <div className="col-span-2 space-y-6">
+          {/* Contact Information */}
+          <div className="rounded-xl border border-[#E8ECF1] bg-white p-6">
+            <h2 className="mb-5 text-base font-semibold text-slate-900">
+              Contact Information
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  Company Name *
+                </label>
+                <input
+                  name="companyName"
+                  required
+                  defaultValue={initialData?.companyName ?? ""}
+                  placeholder="Enter company name"
+                  className="w-full rounded-lg border border-[#E8ECF1] bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  Contact Name
+                </label>
+                <input
+                  name="contactName"
+                  defaultValue={initialData?.contactName ?? ""}
+                  placeholder="Full name of primary contact"
+                  className="w-full rounded-lg border border-[#E8ECF1] bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                    Email Address
+                  </label>
+                  <input
+                    name="email"
+                    type="email"
+                    defaultValue={initialData?.email ?? ""}
+                    placeholder="email@example.com"
+                    className="w-full rounded-lg border border-[#E8ECF1] bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                    Phone Number
+                  </label>
+                  <input
+                    name="phone"
+                    defaultValue={initialData?.phone ?? ""}
+                    placeholder="+1 (555) 000-0000"
+                    className="w-full rounded-lg border border-[#E8ECF1] bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
-          <Separator />
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="contactName">Contact Name</Label>
-              <Input
-                id="contactName"
-                name="contactName"
-                defaultValue={initialData?.contactName ?? ""}
-                placeholder="John Doe"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                defaultValue={initialData?.email ?? ""}
-                placeholder="john@acme.com"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
-                name="phone"
-                defaultValue={initialData?.phone ?? ""}
-                placeholder="+1 (555) 123-4567"
-              />
+          {/* Billing Address */}
+          <div className="rounded-xl border border-[#E8ECF1] bg-white p-6">
+            <h2 className="mb-5 text-base font-semibold text-slate-900">
+              Billing Address
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  Street Address
+                </label>
+                <input
+                  name="address"
+                  defaultValue={initialData?.address ?? ""}
+                  placeholder="123 Main Street"
+                  className="w-full rounded-lg border border-[#E8ECF1] bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                    City
+                  </label>
+                  <input
+                    name="city"
+                    defaultValue={initialData?.city ?? ""}
+                    placeholder="City"
+                    className="w-full rounded-lg border border-[#E8ECF1] bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                    ZIP / Postal Code
+                  </label>
+                  <input
+                    name="postalCode"
+                    defaultValue={initialData?.postalCode ?? ""}
+                    placeholder="00000"
+                    className="w-full rounded-lg border border-[#E8ECF1] bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  Country
+                </label>
+                <input
+                  name="country"
+                  defaultValue={initialData?.country ?? ""}
+                  placeholder="United States"
+                  className="w-full rounded-lg border border-[#E8ECF1] bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
             </div>
           </div>
+        </div>
 
-          <Separator />
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="address">Address</Label>
-              <Input
-                id="address"
-                name="address"
-                defaultValue={initialData?.address ?? ""}
-                placeholder="123 Main Street"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="city">City</Label>
-              <Input
-                id="city"
-                name="city"
-                defaultValue={initialData?.city ?? ""}
-                placeholder="New York"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="postalCode">Postal Code</Label>
-              <Input
-                id="postalCode"
-                name="postalCode"
-                defaultValue={initialData?.postalCode ?? ""}
-                placeholder="10001"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="country">Country</Label>
-              <Input
-                id="country"
-                name="country"
-                defaultValue={initialData?.country ?? ""}
-                placeholder="United States"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="taxId">Tax ID</Label>
-              <Input
-                id="taxId"
+        {/* Right column - Tax Info & Notes */}
+        <div className="space-y-6">
+          {/* Tax Information */}
+          <div className="rounded-xl border border-[#E8ECF1] bg-white p-6">
+            <h2 className="mb-5 text-base font-semibold text-slate-900">
+              Tax Information
+            </h2>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                Tax ID / VAT Number
+              </label>
+              <input
                 name="taxId"
                 defaultValue={initialData?.taxId ?? ""}
-                placeholder="XX-XXXXXXX"
+                placeholder="e.g. US-EIN-12-3456789"
+                className="w-full rounded-lg border border-[#E8ECF1] bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
             </div>
           </div>
 
-          <Separator />
-
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
+          {/* Notes */}
+          <div className="rounded-xl border border-[#E8ECF1] bg-white p-6">
+            <h2 className="mb-5 text-base font-semibold text-slate-900">
+              Notes
+            </h2>
+            <textarea
               name="notes"
               defaultValue={initialData?.notes ?? ""}
-              placeholder="Any additional notes about this client..."
-              rows={4}
+              placeholder="Add internal notes about this client..."
+              rows={5}
+              className="w-full rounded-lg border border-[#E8ECF1] bg-slate-50 px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none"
             />
           </div>
-        </CardContent>
-      </Card>
-
-      <div className="flex justify-end gap-3 mt-6">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => router.back()}
-          disabled={loading}
-        >
-          Cancel
-        </Button>
-        <Button type="submit" disabled={loading}>
-          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {isEditing ? "Update Client" : "Create Client"}
-        </Button>
+        </div>
       </div>
     </form>
   );

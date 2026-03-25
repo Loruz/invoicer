@@ -182,7 +182,7 @@ export function CalendarView() {
           <Button variant="outline" size="icon-sm" onClick={nextMonth}>
             <ChevronRight className="h-4 w-4" />
           </Button>
-          <h2 className="text-lg font-semibold ml-2">{monthLabel}</h2>
+          <h2 className="text-base font-semibold text-slate-900 ml-2">{monthLabel}</h2>
         </div>
         <Button variant="outline" size="sm" onClick={goToToday}>
           Today

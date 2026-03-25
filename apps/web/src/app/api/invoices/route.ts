@@ -7,20 +7,29 @@ import {
   invoiceDiscounts,
   timeEntries,
 } from "@/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { createInvoiceSchema } from "@invoicer/shared";
 
 async function generateInvoiceNumber(userId: string): Promise<string> {
   const year = new Date().getFullYear();
-  const existing = await db.query.invoices.findMany({
-    where: eq(invoices.userId, userId),
-    columns: { invoiceNumber: true },
-  });
-  const yearInvoices = existing.filter((i) =>
-    i.invoiceNumber.startsWith(`INV-${year}-`)
-  );
-  const nextNum = yearInvoices.length + 1;
-  return `INV-${year}-${nextNum.toString().padStart(4, "0")}`;
+  const prefix = `INV-${year}-`;
+
+  // Use MAX to find the highest existing number for this year, avoiding race conditions
+  // by parsing the numeric suffix from the invoice number
+  const [result] = await db
+    .select({
+      maxNum: sql<string>`MAX(CAST(SUBSTRING(${invoices.invoiceNumber} FROM ${prefix.length + 1}) AS INTEGER))`,
+    })
+    .from(invoices)
+    .where(
+      and(
+        eq(invoices.userId, userId),
+        sql`${invoices.invoiceNumber} LIKE ${prefix + '%'}`
+      )
+    );
+
+  const nextNum = (parseInt(result?.maxNum || "0", 10) || 0) + 1;
+  return `${prefix}${nextNum.toString().padStart(4, "0")}`;
 }
 
 export async function GET(req: Request) {

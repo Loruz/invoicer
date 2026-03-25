@@ -29,11 +29,19 @@ export default async function EditInvoicePage({
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">
-        Edit Invoice {invoice.invoiceNumber}
-      </h1>
-      <InvoiceForm initialData={invoice} invoiceId={invoice.id} />
-    </div>
+    <InvoiceForm
+      initialData={{
+        invoiceNumber: invoice.invoiceNumber,
+        clientId: invoice.clientId,
+        currency: invoice.currency,
+        issueDate: invoice.issueDate,
+        dueDate: invoice.dueDate,
+        notes: invoice.notes,
+        paymentTerms: invoice.paymentTerms,
+        lineItems: invoice.lineItems,
+        discounts: invoice.discounts,
+      }}
+      invoiceId={invoice.id}
+    />
   );
 }

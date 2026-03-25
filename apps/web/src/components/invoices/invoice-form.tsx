@@ -2,41 +2,24 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableFooter,
-} from "@/components/ui/table";
-import { Plus, Trash2, Clock, Loader2 } from "lucide-react";
+import { Plus, Trash2, Clock, Loader2, Check, Download, FileText, ChevronDownIcon } from "lucide-react";
 import { toast } from "sonner";
 import {
-  currencies,
   formatCurrency,
+  formatDurationShort,
   type Client,
   type DiscountType,
+  type TimeEntryWithProject,
 } from "@invoicer/shared";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
+import { FieldHint } from "@/components/ui/field-hint";
+import { TimeEntryPicker } from "./time-entry-picker";
 
 interface LineItem {
   description: string;
   quantity: number;
-  unitPrice: number; // in cents
+  unitPrice: number;
   taxRate: number;
   timeEntryId?: string;
   sortOrder: number;
@@ -49,6 +32,7 @@ interface Discount {
 }
 
 interface InvoiceInitialData {
+  invoiceNumber?: string;
   clientId: string;
   currency: string;
   issueDate: Date;
@@ -77,10 +61,9 @@ interface InvoiceFormProps {
   defaultClientId?: string;
 }
 
-function toDateInputValue(date: Date | string | null): string {
-  if (!date) return "";
-  const d = new Date(date);
-  return d.toISOString().split("T")[0];
+function toDate(date: Date | string | null): Date | undefined {
+  if (!date) return undefined;
+  return new Date(date);
 }
 
 function calculateLineAmount(item: LineItem): number {
@@ -92,36 +75,24 @@ function calculateLineTax(item: LineItem): number {
   return Math.round(amount * (item.taxRate / 100));
 }
 
-export function InvoiceForm({
-  initialData,
-  invoiceId,
-  defaultClientId,
-}: InvoiceFormProps) {
+export function InvoiceForm({ initialData, invoiceId, defaultClientId }: InvoiceFormProps) {
   const router = useRouter();
   const isEditing = !!invoiceId;
 
   const [clients, setClients] = useState<Client[]>([]);
   const [loadingClients, setLoadingClients] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [importingTime, setImportingTime] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [unbilledSeconds, setUnbilledSeconds] = useState<number | null>(null);
+  const [invoiceNumber, setInvoiceNumber] = useState(initialData?.invoiceNumber ?? "");
 
-  // Form state
-  const [clientId, setClientId] = useState(
-    initialData?.clientId ?? defaultClientId ?? ""
-  );
-  const [currency, setCurrency] = useState(
-    initialData?.currency ?? "USD"
-  );
-  const [issueDate, setIssueDate] = useState(
-    toDateInputValue(initialData?.issueDate ?? new Date())
-  );
-  const [dueDate, setDueDate] = useState(
-    toDateInputValue(initialData?.dueDate ?? null)
-  );
+  const [clientId, setClientId] = useState(initialData?.clientId ?? defaultClientId ?? "");
+  const [currency, setCurrency] = useState(initialData?.currency ?? "USD");
+  const [issueDate, setIssueDate] = useState<Date | undefined>(toDate(initialData?.issueDate ?? new Date()));
+  const [dueDate, setDueDate] = useState<Date | undefined>(toDate(initialData?.dueDate ?? null));
   const [notes, setNotes] = useState(initialData?.notes ?? "");
-  const [paymentTerms, setPaymentTerms] = useState(
-    initialData?.paymentTerms ?? ""
-  );
+  const [paymentTerms, setPaymentTerms] = useState(initialData?.paymentTerms ?? "");
 
   const [lineItems, setLineItems] = useState<LineItem[]>(() => {
     if (initialData?.lineItems && initialData.lineItems.length > 0) {
@@ -134,15 +105,7 @@ export function InvoiceForm({
         sortOrder: li.sortOrder,
       }));
     }
-    return [
-      {
-        description: "",
-        quantity: 1,
-        unitPrice: 0,
-        taxRate: 0,
-        sortOrder: 0,
-      },
-    ];
+    return [{ description: "", quantity: 1, unitPrice: 0, taxRate: 0, sortOrder: 0 }];
   });
 
   const [discounts, setDiscounts] = useState<Discount[]>(() => {
@@ -156,609 +119,359 @@ export function InvoiceForm({
     return [];
   });
 
-  // Fetch clients
+  // Fetch clients + invoice number for new invoices
   useEffect(() => {
-    async function fetchClients() {
-      try {
-        const res = await fetch("/api/clients");
-        if (res.ok) {
-          const data = await res.json();
-          setClients(data);
-        }
-      } catch {
-        // silently fail
-      } finally {
-        setLoadingClients(false);
-      }
+    fetch("/api/clients").then((r) => r.ok ? r.json() : []).then(setClients).finally(() => setLoadingClients(false));
+    if (!isEditing) {
+      fetch("/api/invoices/next-number").then((r) => r.ok ? r.json() : null).then((d) => { if (d?.invoiceNumber) setInvoiceNumber(d.invoiceNumber); });
     }
-    fetchClients();
-  }, []);
+  }, [isEditing]);
 
   // Calculations
-  const subtotal = lineItems.reduce(
-    (sum, item) => sum + calculateLineAmount(item),
-    0
-  );
-  const taxTotal = lineItems.reduce(
-    (sum, item) => sum + calculateLineTax(item),
-    0
-  );
+  const subtotal = lineItems.reduce((sum, item) => sum + calculateLineAmount(item), 0);
+  const taxTotal = lineItems.reduce((sum, item) => sum + calculateLineTax(item), 0);
   const discountTotal = discounts.reduce((sum, d) => {
-    if (d.type === "percentage") {
-      return sum + Math.round(subtotal * (d.value / 100));
-    }
+    if (d.type === "percentage") return sum + Math.round(subtotal * (d.value / 100));
     return sum + Math.round(d.value * 100);
   }, 0);
   const total = subtotal + taxTotal - discountTotal;
 
-  // Line item management
-  const addLineItem = () => {
-    setLineItems((prev) => [
-      ...prev,
-      {
-        description: "",
-        quantity: 1,
-        unitPrice: 0,
+  // Compute a meaningful tax label from actual line items
+  const uniqueTaxRates = [...new Set(lineItems.map((li) => li.taxRate).filter((r) => r > 0))];
+  const taxLabel = uniqueTaxRates.length === 1 ? `Tax (${uniqueTaxRates[0]}%)` : taxTotal > 0 ? "Tax" : "Tax (0%)";
+
+  const addLineItem = () => setLineItems((prev) => [...prev, { description: "", quantity: 1, unitPrice: 0, taxRate: 0, sortOrder: prev.length }]);
+  const removeLineItem = (index: number) => { if (lineItems.length <= 1) return; setLineItems((prev) => prev.filter((_, i) => i !== index)); };
+  const updateLineItem = (index: number, field: keyof LineItem, value: string | number) => {
+    setLineItems((prev) => prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)));
+  };
+
+  // Fetch unbilled hours count when client changes
+  useEffect(() => {
+    if (!clientId) { setUnbilledSeconds(null); return; }
+    fetch(`/api/time-entries?clientId=${clientId}&unbilled=true`)
+      .then((r) => r.ok ? r.json() : [])
+      .then((entries: { duration: number | null }[]) => {
+        const total = entries.reduce((s: number, e: { duration: number | null }) => s + (e.duration ?? 0), 0);
+        setUnbilledSeconds(total);
+      })
+      .catch(() => setUnbilledSeconds(null));
+  }, [clientId]);
+
+  const handlePickerSelect = useCallback((entries: TimeEntryWithProject[]) => {
+    const newItems: LineItem[] = entries.map((entry, idx) => {
+      const hours = entry.duration ? entry.duration / 3600 : 0;
+      const hourlyRate = entry.project?.hourlyRate ?? 0;
+      return {
+        description: entry.description ? `${entry.project?.name ?? "Project"} - ${entry.description}` : entry.project?.name ?? "Time entry",
+        quantity: Math.round(hours * 100) / 100,
+        unitPrice: hourlyRate,
         taxRate: 0,
-        sortOrder: prev.length,
-      },
-    ]);
-  };
+        timeEntryId: entry.id,
+        sortOrder: lineItems.length + idx,
+      };
+    });
+    setLineItems((prev) => {
+      const existing = prev.length === 1 && prev[0].description === "" && prev[0].unitPrice === 0 ? [] : prev;
+      return [...existing, ...newItems];
+    });
+    // Update unbilled count
+    const addedSeconds = entries.reduce((s, e) => s + (e.duration ?? 0), 0);
+    setUnbilledSeconds((prev) => prev !== null ? Math.max(0, prev - addedSeconds) : null);
+    toast.success(`Added ${newItems.length} time entries.`);
+  }, [lineItems.length]);
 
-  const removeLineItem = (index: number) => {
-    if (lineItems.length <= 1) return;
-    setLineItems((prev) => prev.filter((_, i) => i !== index));
-  };
+  const buildPayload = () => ({
+    clientId, currency,
+    issueDate: issueDate?.toISOString(),
+    dueDate: dueDate?.toISOString(),
+    notes: notes || undefined,
+    paymentTerms: paymentTerms || undefined,
+    lineItems: lineItems.map((li, idx) => ({ description: li.description, quantity: li.quantity, unitPrice: li.unitPrice, taxRate: li.taxRate, timeEntryId: li.timeEntryId, sortOrder: idx })),
+    discounts: discounts.length > 0 ? discounts.map((d) => ({ description: d.description, type: d.type, value: d.value })) : undefined,
+  });
 
-  const updateLineItem = (
-    index: number,
-    field: keyof LineItem,
-    value: string | number
-  ) => {
-    setLineItems((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
-    );
-  };
-
-  // Discount management
-  const addDiscount = () => {
-    setDiscounts((prev) => [
-      ...prev,
-      { description: "", type: "percentage" as DiscountType, value: 0 },
-    ]);
-  };
-
-  const removeDiscount = (index: number) => {
-    setDiscounts((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const updateDiscount = (
-    index: number,
-    field: keyof Discount,
-    value: string | number
-  ) => {
-    setDiscounts((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
-    );
-  };
-
-  // Import unbilled time entries
-  const importUnbilledTime = useCallback(async () => {
-    if (!clientId) {
-      toast.error("Please select a client first.");
-      return;
-    }
-
-    setImportingTime(true);
-    try {
-      const res = await fetch(
-        `/api/time-entries?clientId=${clientId}&unbilled=true`
-      );
-      if (!res.ok) throw new Error("Failed to fetch time entries");
-
-      const entries = await res.json();
-      if (!entries || entries.length === 0) {
-        toast.info("No unbilled time entries found for this client.");
-        return;
-      }
-
-      const newItems: LineItem[] = entries.map(
-        (
-          entry: {
-            id: string;
-            description: string | null;
-            duration: number | null;
-            project?: {
-              name: string;
-              hourlyRate: number | null;
-            };
-          },
-          idx: number
-        ) => {
-          const hours = entry.duration ? entry.duration / 3600 : 0;
-          const hourlyRate = entry.project?.hourlyRate ?? 0;
-          const desc = entry.description
-            ? `${entry.project?.name ?? "Project"} - ${entry.description}`
-            : entry.project?.name ?? "Time entry";
-
-          return {
-            description: desc,
-            quantity: Math.round(hours * 100) / 100,
-            unitPrice: hourlyRate,
-            taxRate: 0,
-            timeEntryId: entry.id,
-            sortOrder: lineItems.length + idx,
-          };
-        }
-      );
-
-      setLineItems((prev) => {
-        // Remove the initial empty line item if it exists
-        const existing =
-          prev.length === 1 &&
-          prev[0].description === "" &&
-          prev[0].unitPrice === 0
-            ? []
-            : prev;
-        return [...existing, ...newItems];
-      });
-
-      toast.success(`Imported ${newItems.length} time entries.`);
-    } catch {
-      toast.error("Failed to import time entries.");
-    } finally {
-      setImportingTime(false);
-    }
-  }, [clientId, lineItems.length]);
-
-  // Submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!clientId) {
-      toast.error("Please select a client.");
-      return;
-    }
-
-    if (lineItems.some((li) => !li.description)) {
-      toast.error("All line items must have a description.");
-      return;
-    }
-
+    if (!clientId) { toast.error("Please select a client."); return; }
+    if (lineItems.some((li) => !li.description)) { toast.error("All line items must have a description."); return; }
     setSubmitting(true);
     try {
-      const payload = {
-        clientId,
-        currency,
-        issueDate: new Date(issueDate).toISOString(),
-        dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
-        notes: notes || undefined,
-        paymentTerms: paymentTerms || undefined,
-        lineItems: lineItems.map((li, idx) => ({
-          description: li.description,
-          quantity: li.quantity,
-          unitPrice: li.unitPrice,
-          taxRate: li.taxRate,
-          timeEntryId: li.timeEntryId,
-          sortOrder: idx,
-        })),
-        discounts:
-          discounts.length > 0
-            ? discounts.map((d) => ({
-                description: d.description,
-                type: d.type,
-                value: d.value,
-              }))
-            : undefined,
-      };
-
-      const url = isEditing
-        ? `/api/invoices/${invoiceId}`
-        : "/api/invoices";
-      const method = isEditing ? "PATCH" : "POST";
-
-      const res = await fetch(url, {
-        method,
+      const res = await fetch(isEditing ? `/api/invoices/${invoiceId}` : "/api/invoices", {
+        method: isEditing ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(buildPayload()),
       });
-
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({}));
-        throw new Error(error.message || "Failed to save invoice");
-      }
-
+      if (!res.ok) { const error = await res.json().catch(() => ({})); throw new Error(error.message || "Failed to save"); }
       const data = await res.json();
-      toast.success(
-        isEditing ? "Invoice updated." : "Invoice created."
-      );
+      toast.success(isEditing ? "Invoice updated." : "Invoice created.");
       router.push(`/invoices/${data.id ?? invoiceId}`);
       router.refresh();
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to save invoice."
-      );
-    } finally {
-      setSubmitting(false);
-    }
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Failed to save."); }
+    setSubmitting(false);
+  };
+
+  const handleSaveDraft = async () => {
+    if (!clientId) { toast.error("Please select a client."); return; }
+    if (lineItems.some((li) => !li.description)) { toast.error("All line items must have a description."); return; }
+    setSavingDraft(true);
+    try {
+      const res = await fetch(isEditing ? `/api/invoices/${invoiceId}` : "/api/invoices", {
+        method: isEditing ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildPayload()),
+      });
+      if (!res.ok) { const error = await res.json().catch(() => ({})); throw new Error(error.message || "Failed to save"); }
+      const data = await res.json();
+      toast.success("Draft saved.");
+      router.push(`/invoices/${data.id ?? invoiceId}`);
+      router.refresh();
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Failed to save."); }
+    setSavingDraft(false);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Client & Currency */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Invoice Details</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="client">Client</Label>
-              <Select
-                value={clientId}
-                onValueChange={(val) => val !== null && setClientId(val)}
-              >
-                <SelectTrigger
-                  className="w-full"
-                  disabled={loadingClients}
-                >
-                  <SelectValue
-                    placeholder={
-                      loadingClients ? "Loading clients..." : "Select a client"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.companyName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+    <form onSubmit={handleSubmit}>
+      {/* Header */}
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">
+            {isEditing ? `Edit Invoice ${invoiceNumber}` : "New Invoice"}
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            {isEditing ? "Update invoice details." : "Create and send a new invoice to your client."}
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="rounded-lg border border-[#E8ECF1] bg-white px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSaveDraft}
+            disabled={savingDraft || submitting}
+            className="rounded-lg border border-[#E8ECF1] bg-white px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+          >
+            {savingDraft ? <Loader2 className="h-4 w-4 animate-spin inline mr-1" /> : null}
+            Save Draft
+          </button>
+          <button type="submit" disabled={submitting || savingDraft} className="flex items-center gap-2 rounded-lg bg-[#0F3D5F] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#0C3350] disabled:opacity-50">
+            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            {isEditing ? "Update Invoice" : "Create Invoice"}
+          </button>
+        </div>
+      </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="currency">Currency</Label>
-              <Select value={currency} onValueChange={(val) => val !== null && setCurrency(val)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select currency" />
-                </SelectTrigger>
-                <SelectContent>
-                  {currencies.map((c) => (
-                    <SelectItem key={c.code} value={c.code}>
-                      {c.symbol} {c.code} - {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+      <div className="grid grid-cols-3 gap-6">
+        {/* Left column */}
+        <div className="col-span-2 space-y-6">
+          {/* Invoice Details */}
+          <div className="rounded-xl border border-[#E8ECF1] bg-white p-6">
+            <h2 className="mb-5 text-base font-semibold text-slate-900">Invoice Details</h2>
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">Invoice Number</label>
+                <input value={invoiceNumber} readOnly className="w-full rounded-lg border border-[#E8ECF1] bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none" />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">Issue Date</label>
+                <DatePicker value={issueDate} onChange={setIssueDate} placeholder="Select date" />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">Due Date</label>
+                <DatePicker value={dueDate} onChange={setDueDate} placeholder="Select date" />
+              </div>
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="issueDate">Issue Date</Label>
-              <Input
-                id="issueDate"
-                type="date"
-                value={issueDate}
-                onChange={(e) => setIssueDate(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="dueDate">Due Date</Label>
-              <Input
-                id="dueDate"
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Line Items */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Line Items</CardTitle>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={importUnbilledTime}
-                disabled={!clientId || importingTime}
-              >
-                {importingTime ? (
-                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                ) : (
-                  <Clock className="mr-1 h-4 w-4" />
-                )}
-                Import Unbilled Time
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addLineItem}
-              >
-                <Plus className="mr-1 h-4 w-4" />
-                Add Item
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[40%]">Description</TableHead>
-                <TableHead className="w-[12%]">Qty</TableHead>
-                <TableHead className="w-[15%]">Unit Price</TableHead>
-                <TableHead className="w-[12%]">Tax %</TableHead>
-                <TableHead className="w-[15%] text-right">Amount</TableHead>
-                <TableHead className="w-[6%]" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {lineItems.map((item, index) => {
-                const amount = calculateLineAmount(item);
-                const tax = calculateLineTax(item);
-                return (
-                  <TableRow key={index}>
-                    <TableCell>
-                      <Input
-                        value={item.description}
-                        onChange={(e) =>
-                          updateLineItem(index, "description", e.target.value)
-                        }
-                        placeholder="Item description"
-                        required
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={item.quantity}
-                        onChange={(e) =>
-                          updateLineItem(
-                            index,
-                            "quantity",
-                            parseFloat(e.target.value) || 0
-                          )
-                        }
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        step="1"
-                        min="0"
-                        value={item.unitPrice / 100}
-                        onChange={(e) =>
-                          updateLineItem(
-                            index,
-                            "unitPrice",
-                            Math.round(
-                              (parseFloat(e.target.value) || 0) * 100
-                            )
-                          )
-                        }
-                        placeholder="0.00"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="100"
-                        value={item.taxRate}
-                        onChange={(e) =>
-                          updateLineItem(
-                            index,
-                            "taxRate",
-                            parseFloat(e.target.value) || 0
-                          )
-                        }
-                      />
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(amount + tax, currency)}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeLineItem(index)}
-                        disabled={lineItems.length <= 1}
-                      >
-                        <Trash2 className="h-4 w-4 text-muted-foreground" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-            <TableFooter>
-              <TableRow>
-                <TableCell colSpan={4} className="text-right font-medium">
-                  Subtotal
-                </TableCell>
-                <TableCell className="text-right font-medium">
-                  {formatCurrency(subtotal, currency)}
-                </TableCell>
-                <TableCell />
-              </TableRow>
-              <TableRow>
-                <TableCell colSpan={4} className="text-right font-medium">
-                  Tax
-                </TableCell>
-                <TableCell className="text-right font-medium">
-                  {formatCurrency(taxTotal, currency)}
-                </TableCell>
-                <TableCell />
-              </TableRow>
-              {discountTotal > 0 && (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-right font-medium">
-                    Discount
-                  </TableCell>
-                  <TableCell className="text-right font-medium text-red-600">
-                    -{formatCurrency(discountTotal, currency)}
-                  </TableCell>
-                  <TableCell />
-                </TableRow>
-              )}
-              <TableRow>
-                <TableCell colSpan={4} className="text-right text-lg font-bold">
-                  Total
-                </TableCell>
-                <TableCell className="text-right text-lg font-bold">
-                  {formatCurrency(total, currency)}
-                </TableCell>
-                <TableCell />
-              </TableRow>
-            </TableFooter>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Discounts */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Discounts</CardTitle>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={addDiscount}
-            >
-              <Plus className="mr-1 h-4 w-4" />
-              Add Discount
-            </Button>
-          </div>
-        </CardHeader>
-        {discounts.length > 0 && (
-          <CardContent>
-            <div className="space-y-3">
-              {discounts.map((discount, index) => (
-                <div
-                  key={index}
-                  className="flex items-end gap-3"
-                >
-                  <div className="flex-1 space-y-1">
-                    <Label>Description</Label>
-                    <Input
-                      value={discount.description}
-                      onChange={(e) =>
-                        updateDiscount(index, "description", e.target.value)
-                      }
-                      placeholder="Discount description"
-                      required
-                    />
-                  </div>
-                  <div className="w-40 space-y-1">
-                    <Label>Type</Label>
-                    <Select
-                      value={discount.type}
-                      onValueChange={(val: string | null) => {
-                        if (val !== null) updateDiscount(index, "type", val);
-                      }}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="percentage">Percentage</SelectItem>
-                        <SelectItem value="fixed">Fixed Amount</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="w-32 space-y-1">
-                    <Label>
-                      {discount.type === "percentage" ? "%" : "Amount"}
-                    </Label>
-                    <Input
-                      type="number"
-                      step={discount.type === "percentage" ? "0.01" : "0.01"}
-                      min="0"
-                      value={discount.value}
-                      onChange={(e) =>
-                        updateDiscount(
-                          index,
-                          "value",
-                          parseFloat(e.target.value) || 0
-                        )
-                      }
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeDiscount(index)}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">Client</label>
+                {!loadingClients && clients.length === 0 ? (
+                  <FieldHint
+                    message="You need to add a client before creating an invoice."
+                    ctaLabel="Add Client"
+                    ctaHref="/clients/new"
                   >
-                    <Trash2 className="h-4 w-4 text-muted-foreground" />
-                  </Button>
-                </div>
-              ))}
+                    <div className="flex w-full items-center justify-between rounded-lg border border-[#E8ECF1] bg-slate-50 px-3 py-2.5 text-sm text-muted-foreground cursor-not-allowed opacity-60">
+                      <span>Select client</span>
+                      <ChevronDownIcon className="size-4 text-muted-foreground" />
+                    </div>
+                  </FieldHint>
+                ) : (
+                  <Select value={clientId || null} onValueChange={(val) => { if (val !== null) setClientId(val); }}>
+                    <SelectTrigger className="w-full rounded-lg border border-[#E8ECF1] bg-white px-3 py-2.5 text-sm">
+                      <SelectValue placeholder="Select client" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clients.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.companyName}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">Currency</label>
+                <Select value={currency || null} onValueChange={(val) => { if (val !== null) setCurrency(val); }}>
+                  <SelectTrigger className="w-full rounded-lg border border-[#E8ECF1] bg-white px-3 py-2.5 text-sm">
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="USD">USD - US Dollar</SelectItem>
+                    <SelectItem value="EUR">EUR - Euro</SelectItem>
+                    <SelectItem value="GBP">GBP - British Pound</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </CardContent>
-        )}
-      </Card>
-
-      {/* Notes & Payment Terms */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Additional Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Notes to display on the invoice..."
-              rows={3}
-            />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="paymentTerms">Payment Terms</Label>
-            <Textarea
-              id="paymentTerms"
+
+          {/* Line Items */}
+          <div className="rounded-xl border border-[#E8ECF1] bg-white p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-base font-semibold text-slate-900">Line Items</h2>
+              <div className="flex gap-2">
+                {clientId && (
+                  <button type="button" onClick={() => setPickerOpen(true)} className="flex items-center gap-1.5 rounded-lg border border-[#E8ECF1] px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                    <Clock className="h-3 w-3" />
+                    Import Time
+                    {unbilledSeconds != null && unbilledSeconds > 0 && (
+                      <span className="ml-1 rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-600">
+                        {formatDurationShort(unbilledSeconds)}
+                      </span>
+                    )}
+                  </button>
+                )}
+                <button type="button" onClick={addLineItem} className="flex items-center gap-1.5 rounded-lg border border-[#E8ECF1] px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                  <Plus className="h-3 w-3" /> Add Item
+                </button>
+              </div>
+            </div>
+
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-[#E8ECF1]">
+                  <th className="pb-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Description</th>
+                  <th className="pb-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-400 w-20">Qty/Hrs</th>
+                  <th className="pb-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-400 w-24">Rate</th>
+                  <th className="pb-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-400 w-28">Amount</th>
+                  <th className="w-8" />
+                </tr>
+              </thead>
+              <tbody>
+                {lineItems.map((item, index) => {
+                  const amount = calculateLineAmount(item);
+                  return (
+                    <tr key={index} className="border-b border-[#E8ECF1] last:border-b-0">
+                      <td className="py-3 pr-3">
+                        <input value={item.description} onChange={(e) => updateLineItem(index, "description", e.target.value)} placeholder="Item description" className="w-full text-sm text-slate-900 outline-none" />
+                      </td>
+                      <td className="py-3 pr-3">
+                        <input type="number" step="0.01" min="0" value={item.quantity} onChange={(e) => updateLineItem(index, "quantity", parseFloat(e.target.value) || 0)} className="w-full text-sm text-slate-600 outline-none" />
+                      </td>
+                      <td className="py-3 pr-3">
+                        <input type="number" step="1" min="0" value={item.unitPrice / 100} onChange={(e) => updateLineItem(index, "unitPrice", Math.round((parseFloat(e.target.value) || 0) * 100))} placeholder="$0.00" className="w-full text-sm text-slate-600 outline-none" />
+                      </td>
+                      <td className="py-3 text-right text-sm font-medium text-slate-900">
+                        {formatCurrency(amount, currency)}
+                      </td>
+                      <td className="py-3 pl-2">
+                        <button type="button" onClick={() => removeLineItem(index)} disabled={lineItems.length <= 1} className="text-slate-300 hover:text-red-500 disabled:opacity-30">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* PDF download - only for existing invoices */}
+          {isEditing && invoiceId && (
+            <div className="rounded-xl border border-[#E8ECF1] bg-white p-6">
+              <div className="mb-4 flex items-center gap-2">
+                <FileText className="h-5 w-5 text-red-500" />
+                <h2 className="text-base font-semibold text-slate-900">Download as PDF</h2>
+              </div>
+              <a
+                href={`/api/invoices/${invoiceId}/pdf`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#0F3D5F] py-3 text-sm font-medium text-white hover:bg-[#0C3350]"
+              >
+                <Download className="h-4 w-4" /> Download PDF
+              </a>
+            </div>
+          )}
+        </div>
+
+        {/* Right column */}
+        <div className="space-y-6">
+          {/* Summary */}
+          <div className="rounded-xl border border-[#E8ECF1] bg-white p-6">
+            <h2 className="mb-5 text-base font-semibold text-slate-900">Summary</h2>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-500">Subtotal</span>
+                <span className="font-medium text-slate-900">{formatCurrency(subtotal, currency)}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-500">{taxLabel}</span>
+                <span className="font-medium text-slate-900">{formatCurrency(taxTotal, currency)}</span>
+              </div>
+              {discountTotal > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-500">Discount</span>
+                  <span className="font-medium text-red-500">-{formatCurrency(discountTotal, currency)}</span>
+                </div>
+              )}
+              <div className="border-t border-[#E8ECF1] pt-3 flex items-center justify-between">
+                <span className="text-sm font-semibold text-slate-900">Total</span>
+                <span className="text-xl font-bold text-[#0F3D5F]">{formatCurrency(total, currency)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Terms */}
+          <div className="rounded-xl border border-[#E8ECF1] bg-white p-6">
+            <h2 className="mb-4 text-base font-semibold text-slate-900">Payment Terms</h2>
+            <textarea
               value={paymentTerms}
               onChange={(e) => setPaymentTerms(e.target.value)}
-              placeholder="Payment terms and conditions..."
+              placeholder="e.g. Payment is due within 30 days of invoice date."
               rows={3}
+              className="w-full rounded-lg border border-[#E8ECF1] bg-slate-50 px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-blue-500 resize-none"
             />
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Submit */}
-      <div className="flex justify-end gap-3">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => router.back()}
-          disabled={submitting}
-        >
-          Cancel
-        </Button>
-        <Button type="submit" disabled={submitting}>
-          {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {isEditing ? "Update Invoice" : "Create Invoice"}
-        </Button>
+          {/* Notes */}
+          <div className="rounded-xl border border-[#E8ECF1] bg-white p-6">
+            <h2 className="mb-4 text-base font-semibold text-slate-900">Notes</h2>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Any additional notes for the client..."
+              rows={4}
+              className="w-full rounded-lg border border-[#E8ECF1] bg-slate-50 px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-blue-500 resize-none"
+            />
+          </div>
+        </div>
       </div>
+
+      {/* Time Entry Picker */}
+      {clientId && (
+        <TimeEntryPicker
+          open={pickerOpen}
+          onOpenChange={setPickerOpen}
+          clientId={clientId}
+          clientName={clients.find((c) => c.id === clientId)?.companyName ?? "Client"}
+          onSelect={handlePickerSelect}
+        />
+      )}
     </form>
   );
 }

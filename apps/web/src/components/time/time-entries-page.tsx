@@ -15,14 +15,15 @@ import {
 } from "@/components/ui/table";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { formatDurationShort } from "@invoicer/shared";
+import { DatePicker } from "@/components/ui/date-picker";
 import type { TimeEntryWithProject } from "@invoicer/shared";
 import { TimeEntryDialog } from "./time-entry-dialog";
 
 export function TimeEntriesPage() {
   const [entries, setEntries] = useState<TimeEntryWithProject[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [fromDate, setFromDate] = useState<Date | undefined>(undefined);
+  const [toDate, setToDate] = useState<Date | undefined>(undefined);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<TimeEntryWithProject | null>(
     null
@@ -32,7 +33,7 @@ export function TimeEntriesPage() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (fromDate) params.set("from", new Date(fromDate).toISOString());
+      if (fromDate) params.set("from", fromDate.toISOString());
       if (toDate) {
         const to = new Date(toDate);
         to.setHours(23, 59, 59, 999);
@@ -103,7 +104,7 @@ export function TimeEntriesPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Time Entries</h1>
+        <h1 className="text-xl font-semibold text-slate-900">Time Entries</h1>
         <Button onClick={handleAdd}>
           <Plus className="size-4" data-icon="inline-start" />
           Add Manual Entry
@@ -112,30 +113,20 @@ export function TimeEntriesPage() {
 
       <div className="flex items-end gap-4 mb-6">
         <div className="grid gap-2">
-          <Label htmlFor="fromDate">From</Label>
-          <Input
-            id="fromDate"
-            type="date"
-            value={fromDate}
-            onChange={(e) => setFromDate(e.target.value)}
-          />
+          <Label>From</Label>
+          <DatePicker value={fromDate} onChange={setFromDate} placeholder="Start date" />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="toDate">To</Label>
-          <Input
-            id="toDate"
-            type="date"
-            value={toDate}
-            onChange={(e) => setToDate(e.target.value)}
-          />
+          <Label>To</Label>
+          <DatePicker value={toDate} onChange={setToDate} placeholder="End date" />
         </div>
         {(fromDate || toDate) && (
           <Button
             variant="ghost"
             size="sm"
             onClick={() => {
-              setFromDate("");
-              setToDate("");
+              setFromDate(undefined);
+              setToDate(undefined);
             }}
           >
             Clear

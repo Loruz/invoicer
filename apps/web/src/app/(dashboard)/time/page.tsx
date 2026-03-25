@@ -1,5 +1,5 @@
-import { TimeEntriesPage } from "@/components/time/time-entries-page";
+import { TimeTrackingPage } from "@/components/time/time-tracking-page";
 
 export default function TimePage() {
-  return <TimeEntriesPage />;
+  return <TimeTrackingPage />;
 }
