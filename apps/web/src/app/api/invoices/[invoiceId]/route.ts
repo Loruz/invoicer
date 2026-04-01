@@ -63,6 +63,9 @@ export async function PATCH(
       updatedAt: new Date(),
     };
 
+    if (data.invoiceNumber !== undefined) {
+      updateFields.invoiceNumber = data.invoiceNumber;
+    }
     if (data.status !== undefined) {
       updateFields.status = data.status;
       if (data.status === "paid" && existing.status !== "paid") {

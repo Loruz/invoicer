@@ -71,7 +71,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const data = createInvoiceSchema.parse(body);
 
-    const invoiceNumber = await generateInvoiceNumber(user.id);
+    const invoiceNumber = data.invoiceNumber || await generateInvoiceNumber(user.id);
 
     // Calculate line item amounts
     const calculatedLineItems = data.lineItems.map((item, index) => {

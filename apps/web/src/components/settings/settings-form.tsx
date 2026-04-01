@@ -246,6 +246,17 @@ export function SettingsForm({ user }: SettingsFormProps) {
                     className="w-full rounded-lg border border-[#E8ECF1] bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500 transition-colors"
                   />
                 </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                    Company Code
+                  </label>
+                  <input
+                    name="companyCode"
+                    defaultValue={user.companyCode ?? ""}
+                    placeholder="e.g. 763401"
+                    className="w-full rounded-lg border border-[#E8ECF1] bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500 transition-colors"
+                  />
+                </div>
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-slate-700">
@@ -258,6 +269,59 @@ export function SettingsForm({ user }: SettingsFormProps) {
                   rows={3}
                   className="w-full rounded-lg border border-[#E8ECF1] bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-blue-500 resize-none transition-colors"
                 />
+              </div>
+
+              {/* Bank Details */}
+              <div className="pt-2">
+                <h3 className="mb-3 text-sm font-semibold text-slate-700">Bank Details</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                      Bank Name
+                    </label>
+                    <input
+                      name="bankName"
+                      defaultValue={user.bankName ?? ""}
+                      placeholder="e.g. SEB"
+                      className="w-full rounded-lg border border-[#E8ECF1] bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500 transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                      Bank Code
+                    </label>
+                    <input
+                      name="bankCode"
+                      defaultValue={user.bankCode ?? ""}
+                      placeholder="e.g. 70440"
+                      className="w-full rounded-lg border border-[#E8ECF1] bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500 transition-colors"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                      SWIFT Code
+                    </label>
+                    <input
+                      name="bankSwift"
+                      defaultValue={user.bankSwift ?? ""}
+                      placeholder="e.g. CBVILT2X"
+                      className="w-full rounded-lg border border-[#E8ECF1] bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500 transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                      Account Number (IBAN)
+                    </label>
+                    <input
+                      name="bankAccount"
+                      defaultValue={user.bankAccount ?? ""}
+                      placeholder="e.g. LT877044060007713233"
+                      className="w-full rounded-lg border border-[#E8ECF1] bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500 transition-colors"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>

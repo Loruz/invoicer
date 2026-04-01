@@ -46,6 +46,7 @@ const SAMPLE_INVOICE = {
     id: "sample",
     userId: "sample",
     companyName: "Acme Corporation",
+    companyCode: null,
     contactName: "John Smith",
     email: "john@acme.com",
     phone: "+1 (555) 123-4567",
@@ -74,6 +75,11 @@ const SAMPLE_USER = {
   businessPhone: "+1 (555) 234-5678",
   businessEntity: "LLC",
   taxId: "US-EIN-12-3456789",
+  companyCode: "763401",
+  bankName: "First National Bank",
+  bankCode: "70440",
+  bankSwift: "FNBKUS33",
+  bankAccount: "US12345678901234",
   email: "sarah@chenstudio.com",
 };
 
@@ -429,6 +435,7 @@ export function TemplateEditor({ user }: TemplateEditorProps) {
                 { key: "showTaxId" as const, label: "Tax ID / VAT" },
                 { key: "showPaymentTerms" as const, label: "Payment Terms" },
                 { key: "showNotes" as const, label: "Notes" },
+                { key: "showBankDetails" as const, label: "Bank Details" },
               ].map(({ key, label }) => (
                 <label
                   key={key}

@@ -83,6 +83,7 @@ export const invoiceDiscountSchema = z.object({
 
 // Invoice schemas
 export const createInvoiceSchema = z.object({
+  invoiceNumber: z.string().max(100).optional(),
   clientId: z.string().uuid("Invalid client ID"),
   issueDate: z.string().datetime().optional(),
   dueDate: z.string().datetime().optional(),
@@ -94,6 +95,7 @@ export const createInvoiceSchema = z.object({
 });
 
 export const updateInvoiceSchema = z.object({
+  invoiceNumber: z.string().max(100).optional(),
   status: z.enum(invoiceStatuses).optional(),
   issueDate: z.string().datetime().optional(),
   dueDate: z.string().datetime().optional(),
@@ -114,6 +116,7 @@ export const invoiceTemplateSchema = z.object({
   showTaxId: z.boolean().default(true),
   showPaymentTerms: z.boolean().default(true),
   showNotes: z.boolean().default(true),
+  showBankDetails: z.boolean().default(true),
   footerText: z.string().max(500).nullable().default(null),
 });
 
@@ -126,6 +129,11 @@ export const updateUserSettingsSchema = z.object({
   businessPhone: z.string().max(50).optional(),
   businessEntity: z.string().max(100).optional(),
   taxId: z.string().max(100).optional(),
+  companyCode: z.string().max(100).optional(),
+  bankName: z.string().max(255).optional(),
+  bankCode: z.string().max(50).optional(),
+  bankSwift: z.string().max(50).optional(),
+  bankAccount: z.string().max(100).optional(),
   defaultCurrency: z.enum(currencyCodes).optional(),
   invoiceTemplate: invoiceTemplateSchema.optional(),
 });

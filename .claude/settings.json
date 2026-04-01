@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(MONO_DIR=\"/Users/vytautaspreiksaitis/Projects/invoicer/node_modules/.pnpm/@fontsource+roboto-mono@5.2.8/node_modules/@fontsource/roboto-mono/files\")",
+      "Bash(cp \"$MONO_DIR/roboto-mono-latin-ext-700-normal.woff\" public/fonts/roboto-mono-700.woff)",
+      "Bash(ls -la public/fonts/*.ttf public/fonts/*.woff)",
+      "Bash(curl -sL \"https://fonts.gstatic.com/s/notoserif/v33/ga6iaw1J5X9T9RW6j9bNVls-hfgvz8JcMofYTa32J4wsL2JAlAhZqFCjwA.ttf\" -o noto-serif-400.ttf)",
+      "Bash(curl -sL \"https://fonts.gstatic.com/s/notoserif/v33/ga6iaw1J5X9T9RW6j9bNVls-hfgvz8JcMofYTa32J4wsL2JAlAhZT1ejwA.ttf\" -o noto-serif-700.ttf)",
+      "Bash(curl -sL \"https://fonts.gstatic.com/s/robotomono/v31/L0xuDF4xlVMF-BfR8bXMIhJHg45mwgGEFl0_3vqPQw.ttf\" -o roboto-mono-400.ttf)",
+      "Bash(curl -sL \"https://fonts.gstatic.com/s/robotomono/v31/L0xuDF4xlVMF-BfR8bXMIhJHg45mwgGEFl0_Of2PQw.ttf\" -o roboto-mono-700.ttf)",
+      "Bash(ls -la *.ttf)"
+    ]
+  }
+}

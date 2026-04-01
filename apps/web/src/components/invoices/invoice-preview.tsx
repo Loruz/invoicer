@@ -48,6 +48,11 @@ interface User {
   businessPhone: string | null;
   businessEntity: string | null;
   taxId: string | null;
+  companyCode: string | null;
+  bankName: string | null;
+  bankCode: string | null;
+  bankSwift: string | null;
+  bankAccount: string | null;
   email: string;
 }
 
@@ -65,9 +70,9 @@ const FONT_FAMILIES: Record<string, string> = {
 
 function formatDate(date: Date | string | null): string {
   if (!date) return "-";
-  return new Date(date).toLocaleDateString("en-US", {
+  return new Date(date).toLocaleDateString("lt-LT", {
     year: "numeric",
-    month: "short",
+    month: "long",
     day: "numeric",
   });
 }
@@ -94,17 +99,28 @@ function BusinessInfo({ user, t }: { user: User; t: InvoiceTemplate }) {
           {user.businessName || user.name || "Invoicer"}
         </span>
       </div>
-      {user.businessAddress && (
-        <p className="text-sm text-slate-500 whitespace-pre-line">{user.businessAddress}</p>
-      )}
       {user.businessEntity && (
         <p className="text-sm text-slate-500">{user.businessEntity}</p>
+      )}
+      {user.companyCode && (
+        <p className="text-sm text-slate-500">Įmonės kodas: {user.companyCode}</p>
+      )}
+      {t.showTaxId && user.taxId && (
+        <p className="text-sm text-slate-500">PVM kodas: {user.taxId}</p>
+      )}
+      {user.businessAddress && (
+        <p className="text-sm text-slate-500 whitespace-pre-line">{user.businessAddress}</p>
       )}
       {(user.businessEmail || user.email) && (
         <p className="text-sm text-slate-500">{user.businessEmail || user.email}</p>
       )}
-      {t.showTaxId && user.taxId && (
-        <p className="text-sm text-slate-500">Tax ID: {user.taxId}</p>
+      {t.showBankDetails && (user.bankName || user.bankAccount) && (
+        <div className="mt-2 text-sm text-slate-500 space-y-0.5">
+          {user.bankName && <p>Bankas: {user.bankName}</p>}
+          {user.bankCode && <p>Banko kodas: {user.bankCode}</p>}
+          {user.bankSwift && <p>SWIFT: {user.bankSwift}</p>}
+          {user.bankAccount && <p>Sąskaita: {user.bankAccount}</p>}
+        </div>
       )}
     </div>
   );
@@ -117,7 +133,7 @@ function ClientInfo({ invoice, t }: { invoice: InvoiceData; t: InvoiceTemplate }
         className="text-xs font-semibold uppercase tracking-wider mb-1"
         style={{ color: t.primaryColor }}
       >
-        Bill To
+        Pirkėjas
       </p>
       <h3 className="text-base font-semibold text-slate-900">{invoice.client.companyName}</h3>
       {invoice.client.contactName && (
@@ -139,11 +155,11 @@ function InvoiceDates({ invoice }: { invoice: InvoiceData }) {
   return (
     <div className="text-right text-sm space-y-1">
       <div>
-        <span className="text-slate-400">Issue Date</span>
+        <span className="text-slate-400">Išrašymo data</span>
         <span className="ml-4 font-medium text-slate-900">{formatDate(invoice.issueDate)}</span>
       </div>
       <div>
-        <span className="text-slate-400">Due Date</span>
+        <span className="text-slate-400">Apmokėjimo data</span>
         <span className="ml-4 font-medium text-slate-900">{formatDate(invoice.dueDate)}</span>
       </div>
     </div>
@@ -155,17 +171,17 @@ function LineItemsTable({ invoice, t }: { invoice: InvoiceData; t: InvoiceTempla
     <table className="w-full mb-6">
       <thead>
         <tr style={{ borderBottom: `2px solid ${t.primaryColor}20` }}>
-          <th className="pb-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Description</th>
-          <th className="pb-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Qty</th>
-          <th className="pb-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Rate</th>
-          <th className="pb-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Amount</th>
+          <th className="pb-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Aprašymas</th>
+          <th className="pb-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Kiekis</th>
+          <th className="pb-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Kaina</th>
+          <th className="pb-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Suma</th>
         </tr>
       </thead>
       <tbody>
         {invoice.lineItems.map((item) => (
           <tr key={item.id} className="border-b border-slate-100">
             <td className="py-3 text-sm text-slate-900">{item.description}</td>
-            <td className="py-3 text-right text-sm text-slate-500">{Number(item.quantity)} hrs</td>
+            <td className="py-3 text-right text-sm text-slate-500">{Number(item.quantity)} val.</td>
             <td className="py-3 text-right text-sm text-slate-500">{formatCurrency(item.unitPrice, invoice.currency)}</td>
             <td className="py-3 text-right text-sm font-medium text-slate-900">{formatCurrency(item.amount, invoice.currency)}</td>
           </tr>
@@ -180,23 +196,23 @@ function Totals({ invoice, t }: { invoice: InvoiceData; t: InvoiceTemplate }) {
     <div className="flex justify-end mb-8">
       <div className="w-64 space-y-2">
         <div className="flex justify-between text-sm">
-          <span className="text-slate-400">Subtotal</span>
+          <span className="text-slate-400">Tarpinė suma</span>
           <span className="text-slate-900">{formatCurrency(invoice.subtotal, invoice.currency)}</span>
         </div>
         {invoice.taxTotal > 0 && (
           <div className="flex justify-between text-sm">
-            <span className="text-slate-400">Tax</span>
+            <span className="text-slate-400">PVM</span>
             <span className="text-slate-900">{formatCurrency(invoice.taxTotal, invoice.currency)}</span>
           </div>
         )}
         {invoice.discountTotal > 0 && (
           <div className="flex justify-between text-sm">
-            <span className="text-slate-400">Discount</span>
+            <span className="text-slate-400">Nuolaida</span>
             <span className="text-red-500">-{formatCurrency(invoice.discountTotal, invoice.currency)}</span>
           </div>
         )}
         <div className="border-t border-slate-200 pt-2 flex justify-between">
-          <span className="text-sm font-bold text-slate-900">Total Due</span>
+          <span className="text-sm font-bold text-slate-900">Mokėti</span>
           <span className="text-lg font-bold" style={{ color: t.accentColor }}>
             {formatCurrency(invoice.total, invoice.currency)}
           </span>
@@ -214,7 +230,7 @@ function PaymentDetails({ invoice, t }: { invoice: InvoiceData; t: InvoiceTempla
         className="text-xs font-semibold uppercase tracking-wider mb-2"
         style={{ color: t.primaryColor }}
       >
-        Payment Details
+        Mokėjimo informacija
       </p>
       {t.showPaymentTerms && invoice.paymentTerms && (
         <p className="text-sm text-slate-500 whitespace-pre-line">{invoice.paymentTerms}</p>
@@ -244,7 +260,7 @@ function ClassicLayout({ invoice, user, t }: { invoice: InvoiceData; user: User;
       <div className="flex items-start justify-between mb-8">
         <BusinessInfo user={user} t={t} />
         <div className="text-right">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-300">INVOICE</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-300">SĄSKAITA FAKTŪRA</h1>
           <p className="text-sm font-medium" style={{ color: t.primaryColor }}>
             #{invoice.invoiceNumber}
           </p>
@@ -276,22 +292,28 @@ function ModernLayout({ invoice, user, t }: { invoice: InvoiceData; user: User; 
         style={{ backgroundColor: t.primaryColor }}
       >
         <div>
-          <h1 className="text-2xl font-bold text-white/90">INVOICE</h1>
+          <h1 className="text-2xl font-bold text-white/90">SĄSKAITA FAKTŪRA</h1>
           <p className="text-sm text-white/70 mt-0.5">#{invoice.invoiceNumber}</p>
         </div>
         <div className="text-right text-sm text-white/80 space-y-0.5">
-          <div>Issued: {formatDate(invoice.issueDate)}</div>
-          <div>Due: {formatDate(invoice.dueDate)}</div>
+          <div>Išrašyta: {formatDate(invoice.issueDate)}</div>
+          <div>Apmokėti iki: {formatDate(invoice.dueDate)}</div>
         </div>
       </div>
 
       {/* From / To columns */}
       <div className="grid grid-cols-2 gap-8 mb-10">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">From</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Pardavėjas</p>
           <p className="text-sm font-semibold text-slate-900">{user.businessName || user.name || "Invoicer"}</p>
           {user.businessEntity && (
             <p className="text-sm text-slate-500">{user.businessEntity}</p>
+          )}
+          {user.companyCode && (
+            <p className="text-sm text-slate-500">Įmonės kodas: {user.companyCode}</p>
+          )}
+          {t.showTaxId && user.taxId && (
+            <p className="text-sm text-slate-500">PVM kodas: {user.taxId}</p>
           )}
           {user.businessAddress && (
             <p className="text-sm text-slate-500 whitespace-pre-line">{user.businessAddress}</p>
@@ -299,12 +321,17 @@ function ModernLayout({ invoice, user, t }: { invoice: InvoiceData; user: User; 
           {(user.businessEmail || user.email) && (
             <p className="text-sm text-slate-500">{user.businessEmail || user.email}</p>
           )}
-          {t.showTaxId && user.taxId && (
-            <p className="text-sm text-slate-500">Tax ID: {user.taxId}</p>
+          {t.showBankDetails && (user.bankName || user.bankAccount) && (
+            <div className="mt-2 text-sm text-slate-500 space-y-0.5">
+              {user.bankName && <p>Bankas: {user.bankName}</p>}
+              {user.bankCode && <p>Banko kodas: {user.bankCode}</p>}
+              {user.bankSwift && <p>SWIFT: {user.bankSwift}</p>}
+              {user.bankAccount && <p>Sąskaita: {user.bankAccount}</p>}
+            </div>
           )}
         </div>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Bill To</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Pirkėjas</p>
           <p className="text-sm font-semibold text-slate-900">{invoice.client.companyName}</p>
           {invoice.client.contactName && (
             <p className="text-sm text-slate-500">{invoice.client.contactName}</p>
@@ -328,25 +355,25 @@ function ModernLayout({ invoice, user, t }: { invoice: InvoiceData; user: User; 
               className="py-2.5 px-3 text-left text-xs font-semibold uppercase tracking-wider text-white rounded-l-md"
               style={{ backgroundColor: t.primaryColor }}
             >
-              Description
+              Aprašymas
             </th>
             <th
               className="py-2.5 px-3 text-right text-xs font-semibold uppercase tracking-wider text-white"
               style={{ backgroundColor: t.primaryColor }}
             >
-              Qty
+              Kiekis
             </th>
             <th
               className="py-2.5 px-3 text-right text-xs font-semibold uppercase tracking-wider text-white"
               style={{ backgroundColor: t.primaryColor }}
             >
-              Rate
+              Kaina
             </th>
             <th
               className="py-2.5 px-3 text-right text-xs font-semibold uppercase tracking-wider text-white rounded-r-md"
               style={{ backgroundColor: t.primaryColor }}
             >
-              Amount
+              Suma
             </th>
           </tr>
         </thead>
@@ -354,7 +381,7 @@ function ModernLayout({ invoice, user, t }: { invoice: InvoiceData; user: User; 
           {invoice.lineItems.map((item, i) => (
             <tr key={item.id} className={i % 2 === 0 ? "bg-slate-50/50" : ""}>
               <td className="py-3 px-3 text-sm text-slate-900">{item.description}</td>
-              <td className="py-3 px-3 text-right text-sm text-slate-500">{Number(item.quantity)} hrs</td>
+              <td className="py-3 px-3 text-right text-sm text-slate-500">{Number(item.quantity)} val.</td>
               <td className="py-3 px-3 text-right text-sm text-slate-500">{formatCurrency(item.unitPrice, invoice.currency)}</td>
               <td className="py-3 px-3 text-right text-sm font-medium text-slate-900">{formatCurrency(item.amount, invoice.currency)}</td>
             </tr>
@@ -391,27 +418,38 @@ function MinimalLayout({ invoice, user, t }: { invoice: InvoiceData; user: User;
           {user.businessEntity && (
             <p className="text-xs text-slate-400 mt-0.5">{user.businessEntity}</p>
           )}
+          {user.companyCode && (
+            <p className="text-xs text-slate-400">{user.companyCode}</p>
+          )}
+          {t.showTaxId && user.taxId && (
+            <p className="text-xs text-slate-400">{user.taxId}</p>
+          )}
           {user.businessAddress && (
             <p className="text-xs text-slate-400 whitespace-pre-line mt-1">{user.businessAddress}</p>
           )}
           {(user.businessEmail || user.email) && (
             <p className="text-xs text-slate-400">{user.businessEmail || user.email}</p>
           )}
-          {t.showTaxId && user.taxId && (
-            <p className="text-xs text-slate-400">{user.taxId}</p>
+          {t.showBankDetails && (user.bankName || user.bankAccount) && (
+            <div className="mt-1.5 text-xs text-slate-400 space-y-0.5">
+              {user.bankName && <p>Bankas: {user.bankName}</p>}
+              {user.bankCode && <p>Banko kodas: {user.bankCode}</p>}
+              {user.bankSwift && <p>SWIFT: {user.bankSwift}</p>}
+              {user.bankAccount && <p>Sąskaita: {user.bankAccount}</p>}
+            </div>
           )}
         </div>
         <div className="text-right">
-          <p className="text-xs text-slate-400 uppercase tracking-widest">Invoice</p>
+          <p className="text-xs text-slate-400 uppercase tracking-widest">Sąskaita faktūra</p>
           <p className="text-sm text-slate-600 mt-0.5">{invoice.invoiceNumber}</p>
           <p className="text-xs text-slate-400 mt-3">{formatDate(invoice.issueDate)}</p>
-          <p className="text-xs text-slate-400">Due {formatDate(invoice.dueDate)}</p>
+          <p className="text-xs text-slate-400">Apmokėti iki {formatDate(invoice.dueDate)}</p>
         </div>
       </div>
 
       {/* Client — single line label */}
       <div className="mb-10">
-        <p className="text-xs text-slate-400 mb-1">Billed to</p>
+        <p className="text-xs text-slate-400 mb-1">Pirkėjas</p>
         <p className="text-sm text-slate-900">{invoice.client.companyName}</p>
         {invoice.client.email && (
           <p className="text-xs text-slate-400">{invoice.client.email}</p>
@@ -427,10 +465,10 @@ function MinimalLayout({ invoice, user, t }: { invoice: InvoiceData; user: User;
       <table className="w-full mb-8">
         <thead>
           <tr className="border-b border-slate-200">
-            <th className="pb-2 text-left text-xs font-normal text-slate-400">Description</th>
-            <th className="pb-2 text-right text-xs font-normal text-slate-400">Qty</th>
-            <th className="pb-2 text-right text-xs font-normal text-slate-400">Rate</th>
-            <th className="pb-2 text-right text-xs font-normal text-slate-400">Amount</th>
+            <th className="pb-2 text-left text-xs font-normal text-slate-400">Aprašymas</th>
+            <th className="pb-2 text-right text-xs font-normal text-slate-400">Kiekis</th>
+            <th className="pb-2 text-right text-xs font-normal text-slate-400">Kaina</th>
+            <th className="pb-2 text-right text-xs font-normal text-slate-400">Suma</th>
           </tr>
         </thead>
         <tbody>
@@ -449,23 +487,23 @@ function MinimalLayout({ invoice, user, t }: { invoice: InvoiceData; user: User;
       <div className="flex justify-end mb-10">
         <div className="w-56 space-y-1.5">
           <div className="flex justify-between text-xs">
-            <span className="text-slate-400">Subtotal</span>
+            <span className="text-slate-400">Tarpinė suma</span>
             <span className="text-slate-600">{formatCurrency(invoice.subtotal, invoice.currency)}</span>
           </div>
           {invoice.taxTotal > 0 && (
             <div className="flex justify-between text-xs">
-              <span className="text-slate-400">Tax</span>
+              <span className="text-slate-400">PVM</span>
               <span className="text-slate-600">{formatCurrency(invoice.taxTotal, invoice.currency)}</span>
             </div>
           )}
           {invoice.discountTotal > 0 && (
             <div className="flex justify-between text-xs">
-              <span className="text-slate-400">Discount</span>
+              <span className="text-slate-400">Nuolaida</span>
               <span className="text-red-400">-{formatCurrency(invoice.discountTotal, invoice.currency)}</span>
             </div>
           )}
           <div className="border-t border-slate-200 pt-2 flex justify-between">
-            <span className="text-sm text-slate-700">Total</span>
+            <span className="text-sm text-slate-700">Viso</span>
             <span className="text-sm font-semibold text-slate-900">
               {formatCurrency(invoice.total, invoice.currency)}
             </span>
@@ -504,29 +542,38 @@ function FormalLayout({ invoice, user, t }: { invoice: InvoiceData; user: User; 
       {/* Centered header */}
       <div className="text-center mb-10">
         <h1 className="text-3xl font-bold text-slate-900 uppercase tracking-wide mb-4">
-          Invoice
+          Sąskaita faktūra
         </h1>
         <div className="text-sm text-slate-600 space-y-0.5">
-          <p>No. {invoice.invoiceNumber}</p>
-          <p>Invoice date {formatDate(invoice.issueDate)}</p>
-          {invoice.dueDate && <p>Due by {formatDate(invoice.dueDate)}</p>}
+          <p>Nr. {invoice.invoiceNumber}</p>
+          <p>Sąskaitos data {formatDate(invoice.issueDate)}</p>
+          {invoice.dueDate && <p>Apmokėti iki {formatDate(invoice.dueDate)}</p>}
         </div>
       </div>
 
       {/* Seller / Buyer two columns */}
       <div className="grid grid-cols-2 gap-10 mb-10">
         <div>
-          <p className="text-base font-bold text-slate-900 mb-2">Seller</p>
+          <p className="text-base font-bold text-slate-900 mb-2">Pardavėjas</p>
           <div className="text-sm text-slate-700 space-y-0.5">
             <p>{user.businessName || user.name || "Invoicer"}</p>
             {user.businessEntity && <p>{user.businessEntity}</p>}
-            {t.showTaxId && user.taxId && <p>{user.taxId}</p>}
+            {user.companyCode && <p>Įmonės kodas: {user.companyCode}</p>}
+            {t.showTaxId && user.taxId && <p>PVM kodas: {user.taxId}</p>}
             {user.businessAddress && (
               <p className="whitespace-pre-line">{user.businessAddress}</p>
             )}
             {user.businessPhone && <p>{user.businessPhone}</p>}
             {(user.businessEmail || user.email) && (
               <p>{user.businessEmail || user.email}</p>
+            )}
+            {t.showBankDetails && (user.bankName || user.bankAccount) && (
+              <div className="mt-2 space-y-0.5">
+                {user.bankName && <p>Bankas: {user.bankName}</p>}
+                {user.bankCode && <p>Banko kodas: {user.bankCode}</p>}
+                {user.bankSwift && <p>SWIFT: {user.bankSwift}</p>}
+                {user.bankAccount && <p>Sąskaita: {user.bankAccount}</p>}
+              </div>
             )}
           </div>
           {/* Payment terms as bank details */}
@@ -537,7 +584,7 @@ function FormalLayout({ invoice, user, t }: { invoice: InvoiceData; user: User; 
           )}
         </div>
         <div>
-          <p className="text-base font-bold text-slate-900 mb-2">Buyer</p>
+          <p className="text-base font-bold text-slate-900 mb-2">Pirkėjas</p>
           <div className="text-sm text-slate-700 space-y-0.5">
             <p>{invoice.client.companyName}</p>
             {invoice.client.taxId && <p>{invoice.client.taxId}</p>}
@@ -558,10 +605,10 @@ function FormalLayout({ invoice, user, t }: { invoice: InvoiceData; user: User; 
       <table className="w-full mb-2">
         <thead>
           <tr className="border-b-2 border-slate-900">
-            <th className="pb-2 text-left text-sm font-bold text-slate-900">Description</th>
-            <th className="pb-2 text-center text-sm font-bold text-slate-900 w-20">Qty</th>
-            <th className="pb-2 text-right text-sm font-bold text-slate-900 w-28">Rate</th>
-            <th className="pb-2 text-right text-sm font-bold text-slate-900 w-28">Amount</th>
+            <th className="pb-2 text-left text-sm font-bold text-slate-900">Aprašymas</th>
+            <th className="pb-2 text-center text-sm font-bold text-slate-900 w-20">Kiekis</th>
+            <th className="pb-2 text-right text-sm font-bold text-slate-900 w-28">Kaina</th>
+            <th className="pb-2 text-right text-sm font-bold text-slate-900 w-28">Suma</th>
           </tr>
         </thead>
         <tbody>
@@ -582,25 +629,25 @@ function FormalLayout({ invoice, user, t }: { invoice: InvoiceData; user: User; 
           {(invoice.taxTotal > 0 || invoice.discountTotal > 0) && (
             <>
               <div className="flex justify-between gap-8 text-sm">
-                <span className="text-slate-600">Subtotal</span>
+                <span className="text-slate-600">Tarpinė suma</span>
                 <span className="text-slate-900">{formatCurrency(invoice.subtotal, invoice.currency)}</span>
               </div>
               {invoice.taxTotal > 0 && (
                 <div className="flex justify-between gap-8 text-sm">
-                  <span className="text-slate-600">Tax</span>
+                  <span className="text-slate-600">PVM</span>
                   <span className="text-slate-900">{formatCurrency(invoice.taxTotal, invoice.currency)}</span>
                 </div>
               )}
               {invoice.discountTotal > 0 && (
                 <div className="flex justify-between gap-8 text-sm">
-                  <span className="text-slate-600">Discount</span>
+                  <span className="text-slate-600">Nuolaida</span>
                   <span className="text-red-600">-{formatCurrency(invoice.discountTotal, invoice.currency)}</span>
                 </div>
               )}
             </>
           )}
           <div className="flex justify-between gap-8 text-sm font-bold text-slate-900">
-            <span>Total</span>
+            <span>Viso</span>
             <span>{formatCurrency(invoice.total, invoice.currency)}</span>
           </div>
         </div>
@@ -613,7 +660,7 @@ function FormalLayout({ invoice, user, t }: { invoice: InvoiceData; user: User; 
 
       {/* Issuer line */}
       <p className="text-sm text-slate-600 italic mt-6">
-        Invoice issued by: {user.name || user.businessName || "—"}
+        Sąskaitą išrašė: {user.name || user.businessName || "—"}
       </p>
 
       {t.footerText && (

@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { invoices } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import ReactPDF from "@react-pdf/renderer";
+import "@/lib/pdf-fonts";
 import { InvoicePdfDocument } from "@/components/invoices/invoice-pdf-document";
 
 export async function GET(

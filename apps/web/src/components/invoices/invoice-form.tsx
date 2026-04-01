@@ -254,6 +254,7 @@ export function InvoiceForm({
 	);
 
 	const buildPayload = () => ({
+		invoiceNumber: invoiceNumber || undefined,
 		clientId,
 		currency,
 		issueDate: issueDate?.toISOString(),
@@ -410,8 +411,9 @@ export function InvoiceForm({
 								</label>
 								<input
 									value={invoiceNumber}
-									readOnly
-									className="w-full rounded-lg border border-[#E8ECF1] bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none"
+									onChange={(e) => setInvoiceNumber(e.target.value)}
+									placeholder="INV-2026-0001"
+									className="w-full rounded-lg border border-[#E8ECF1] bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500 transition-colors"
 								/>
 							</div>
 							<div>

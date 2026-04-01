@@ -10,6 +10,7 @@ export type InvoiceTemplate = {
   showTaxId: boolean;
   showPaymentTerms: boolean;
   showNotes: boolean;
+  showBankDetails: boolean;
   footerText: string | null;
 };
 
@@ -23,6 +24,7 @@ export const DEFAULT_INVOICE_TEMPLATE: InvoiceTemplate = {
   showTaxId: true,
   showPaymentTerms: true,
   showNotes: true,
+  showBankDetails: true,
   footerText: null,
 };
 
@@ -37,6 +39,11 @@ export type User = {
   businessPhone: string | null;
   businessEntity: string | null;
   taxId: string | null;
+  companyCode: string | null;
+  bankName: string | null;
+  bankCode: string | null;
+  bankSwift: string | null;
+  bankAccount: string | null;
   defaultCurrency: string;
   invoiceTemplate: InvoiceTemplate | null;
   createdAt: Date;
