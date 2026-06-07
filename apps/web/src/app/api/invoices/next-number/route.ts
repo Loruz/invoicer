@@ -1,30 +1,12 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
-import { db } from "@/db";
-import { invoices } from "@/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { getNextInvoiceNumber } from "@/lib/invoice-number";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const user = await getAuthenticatedUser();
-
-    const year = new Date().getFullYear();
-    const prefix = `INV-${year}-`;
-
-    const [result] = await db
-      .select({
-        maxNum: sql<string>`MAX(CAST(SUBSTRING(${invoices.invoiceNumber} FROM ${prefix.length + 1}) AS INTEGER))`,
-      })
-      .from(invoices)
-      .where(
-        and(
-          eq(invoices.userId, user.id),
-          sql`${invoices.invoiceNumber} LIKE ${prefix + '%'}`
-        )
-      );
-
-    const nextNum = (parseInt(result?.maxNum || "0", 10) || 0) + 1;
-    const invoiceNumber = `${prefix}${nextNum.toString().padStart(4, "0")}`;
+    const basedOn = new URL(req.url).searchParams.get("basedOn");
+    const invoiceNumber = await getNextInvoiceNumber(user.id, basedOn);
 
     return NextResponse.json({ invoiceNumber });
   } catch (error) {

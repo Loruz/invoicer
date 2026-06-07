@@ -159,8 +159,10 @@ export function InvoiceForm({
 		return [];
 	});
 
-	// Fetch next invoice number for new invoices
-	const { data: nextNumber } = useNextInvoiceNumber(!isEditing);
+	// Fetch next invoice number for new invoices (skip if server prefilled, e.g. copy)
+	const shouldFetchNextNumber =
+		!isEditing && !initialData?.invoiceNumber;
+	const { data: nextNumber } = useNextInvoiceNumber(shouldFetchNextNumber);
 	useEffect(() => {
 		if (nextNumber && !invoiceNumber) setInvoiceNumber(nextNumber);
 	}, [nextNumber]); // eslint-disable-line react-hooks/exhaustive-deps

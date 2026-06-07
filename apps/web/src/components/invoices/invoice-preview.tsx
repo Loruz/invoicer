@@ -1,5 +1,3 @@
-"use client";
-
 import { formatCurrency } from "@invoicer/shared";
 import type { Client, InvoiceTemplate } from "@invoicer/shared";
 import { DEFAULT_INVOICE_TEMPLATE } from "@invoicer/shared";

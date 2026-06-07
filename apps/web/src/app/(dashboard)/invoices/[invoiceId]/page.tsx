@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { InvoicePreview } from "@/components/invoices/invoice-preview";
 import { InvoiceStatusActions } from "@/components/invoices/invoice-status-actions";
 import Link from "next/link";
-import { Pencil, Download, Send, ChevronLeft } from "lucide-react";
+import { Pencil, Download, Send, ChevronLeft, Copy } from "lucide-react";
 import type { InvoiceStatus } from "@invoicer/shared";
 
 interface InvoiceDetailPageProps {
@@ -62,6 +62,13 @@ export default async function InvoiceDetailPage({
           <StatusBadge status={invoice.status} />
         </div>
         <div className="flex items-center gap-3">
+          <Link
+            href={`/invoices/new?from=${invoice.id}`}
+            className="flex items-center gap-2 rounded-lg border border-[#E8ECF1] bg-white px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+          >
+            <Copy className="h-4 w-4" />
+            Copy as new
+          </Link>
           {invoice.status === "draft" && (
             <Link
               href={`/invoices/${invoice.id}/edit`}

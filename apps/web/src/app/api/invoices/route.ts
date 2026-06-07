@@ -7,30 +7,9 @@ import {
   invoiceDiscounts,
   timeEntries,
 } from "@/db/schema";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { createInvoiceSchema } from "@invoicer/shared";
-
-async function generateInvoiceNumber(userId: string): Promise<string> {
-  const year = new Date().getFullYear();
-  const prefix = `INV-${year}-`;
-
-  // Use MAX to find the highest existing number for this year, avoiding race conditions
-  // by parsing the numeric suffix from the invoice number
-  const [result] = await db
-    .select({
-      maxNum: sql<string>`MAX(CAST(SUBSTRING(${invoices.invoiceNumber} FROM ${prefix.length + 1}) AS INTEGER))`,
-    })
-    .from(invoices)
-    .where(
-      and(
-        eq(invoices.userId, userId),
-        sql`${invoices.invoiceNumber} LIKE ${prefix + '%'}`
-      )
-    );
-
-  const nextNum = (parseInt(result?.maxNum || "0", 10) || 0) + 1;
-  return `${prefix}${nextNum.toString().padStart(4, "0")}`;
-}
+import { getNextInvoiceNumber } from "@/lib/invoice-number";
 
 export async function GET(req: Request) {
   try {
@@ -71,7 +50,8 @@ export async function POST(req: Request) {
     const body = await req.json();
     const data = createInvoiceSchema.parse(body);
 
-    const invoiceNumber = data.invoiceNumber || await generateInvoiceNumber(user.id);
+    const invoiceNumber =
+      data.invoiceNumber || (await getNextInvoiceNumber(user.id));
 
     // Calculate line item amounts
     const calculatedLineItems = data.lineItems.map((item, index) => {

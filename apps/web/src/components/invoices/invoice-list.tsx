@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Download, FileText } from "lucide-react";
+import { Plus, Search, Download, FileText, Copy } from "lucide-react";
 import { formatCurrency } from "@invoicer/shared";
 import type { Client } from "@invoicer/shared";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -213,6 +213,13 @@ export function InvoiceList({ invoices }: InvoiceListProps) {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-end gap-2">
+                      <Link
+                        href={`/invoices/new?from=${invoice.id}`}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#E8ECF1] text-slate-400 hover:bg-slate-50 hover:text-slate-600"
+                        title="Copy as new invoice"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Link>
                       <a
                         href={`/api/invoices/${invoice.id}/pdf`}
                         target="_blank"
